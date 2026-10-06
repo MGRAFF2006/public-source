@@ -64,7 +64,7 @@ protected:
 	void Cleanup();
 
 private:
-	static void WriteTexture_RenderThread(FTexture2DDynamicResource* TextureResource, TArray64<uint8>* RawData,
+	static void WriteTexture_RenderThread(FTexture2DDynamicResource* TextureResource, const TArray64<uint8>& RawData,
 										  bool bUseSRGB = true);
 
 	void HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);

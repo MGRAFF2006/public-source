@@ -1,4 +1,4 @@
-// Copyright Kyri123 / KMods 2026. All Rights Reserved.
+﻿// Copyright Kyri123 / KMods 2026. All Rights Reserved.
 
 #include "Widget/RssDownloadImage.h"
 #include "Cache/RssImageCache.h"
@@ -103,7 +103,7 @@ URssDownloadImage* URssDownloadImage::DownloadImageNoCache(FString URL)
 	return DownloadTask;
 }
 
-void URssDownloadImage::WriteTexture_RenderThread(FTexture2DDynamicResource* TextureResource, TArray64<uint8>* RawData,
+void URssDownloadImage::WriteTexture_RenderThread(FTexture2DDynamicResource* TextureResource, const TArray64<uint8>& RawData,
                                                   bool bUseSRGB)
 {
 #if !UE_SERVER
@@ -124,7 +124,7 @@ void URssDownloadImage::WriteTexture_RenderThread(FTexture2DDynamicResource* Tex
 		{
 			uint8* DestPtr = &DestData[(static_cast<int64>(Height) - 1 - y) * DestStride];
 
-			const FColor* SrcPtr = &((FColor*)(RawData->GetData()))[(static_cast<int64>(Height) - 1 - y) * Width];
+			const FColor* SrcPtr = &reinterpret_cast<const FColor*>(RawData.GetData())[(static_cast<int64>(Height) - 1 - y) * Width];
 			for (int32 x = 0; x < Width; x++)
 			{
 				*DestPtr++ = SrcPtr->B;
@@ -138,7 +138,6 @@ void URssDownloadImage::WriteTexture_RenderThread(FTexture2DDynamicResource* Tex
 		RHIUnlockTexture2D(TextureRHI, 0, false, false);
 	}
 
-	delete RawData;
 #endif
 }
 
@@ -202,7 +201,7 @@ void URssDownloadImage::HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpRes
 					continue;
 				}
 
-				TArray64<uint8>* RawData = new TArray64<uint8>();
+				TUniquePtr<TArray64<uint8>> RawData = MakeUnique<TArray64<uint8>>();
 				constexpr ERGBFormat InFormat = ERGBFormat::BGRA;
 				if (ImageWrapper->GetRaw(InFormat, 8, *RawData))
 				{
@@ -218,14 +217,10 @@ void URssDownloadImage::HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpRes
 							static_cast<FTexture2DDynamicResource*>(Texture->GetResource()))
 						{
 							ENQUEUE_RENDER_COMMAND(FWriteRawDataToTexture)(
-								[TextureResource, RawData](FRHICommandListImmediate& RHICmdList)
+								[TextureResource, RawData = MoveTemp(RawData)](FRHICommandListImmediate& RHICmdList)
 								{
-									WriteTexture_RenderThread(TextureResource, RawData);
+									WriteTexture_RenderThread(TextureResource, *RawData);
 								});
-						}
-						else
-						{
-							delete RawData;
 						}
 
 						OnSuccess.Broadcast(Texture);
