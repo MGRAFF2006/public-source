@@ -272,7 +272,10 @@ void URssDownloadImage::StartWithCache(FString URL, UObject* WorldContextObject)
 		CacheManager->OnImageLoaded.AddDynamic(this, &URssDownloadImage::OnCacheImageLoaded);
 		CacheManager->OnImageFailed.AddDynamic(this, &URssDownloadImage::OnCacheImageFailed);
 
-		CacheManager->RequestImage(URL, bPersistToCache);
+		if (!CacheManager->RequestImage(URL, bPersistToCache))
+		{
+			OnCacheImageFailed(URL);
+		}
 		return;
 	}
 
