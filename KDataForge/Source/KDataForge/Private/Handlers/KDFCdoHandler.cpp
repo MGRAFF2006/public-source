@@ -305,12 +305,23 @@ bool UKDFCdoHandler::ApplyPatchEntry(const FKDFNode& Patch, FKDFApplyContext& Co
 					{
 						return false;
 					}
+					FKDFPatchRecord Record;
+					Record.mSourceFile = SourceFile;
+					Record.mPackRef = PackRef;
+					Record.mRootType = TEXT("cdo");
+					TArray<FKDFDiagnostic> Diagnostics;
 					FKDFApplyContext DeferredContext;
 					DeferredContext.mGameInstance = GameInstance;
 					DeferredContext.mSourceFile = SourceFile;
 					DeferredContext.mPackRef = PackRef;
 					DeferredContext.bDebug = bDebug;
+					DeferredContext.mDiagnostics = &Diagnostics;
+					DeferredContext.mPatchRecord = &Record;
 					Handler->ApplyPatchEntry(DeferredPatch.Get(), DeferredContext);
+					if (UKDFSubsystem* Subsystem = UKDFSubsystem::Get(GameInstance))
+					{
+						Subsystem->RecordDeferredPatchResult(MoveTemp(Record), MoveTemp(Diagnostics));
+					}
 					return false;
 				}));
 		};

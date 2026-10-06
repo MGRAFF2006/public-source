@@ -556,6 +556,25 @@ void UKDFSubsystem::ApplyStages()
 	}
 }
 
+void UKDFSubsystem::RecordDeferredPatchResult(FKDFPatchRecord Record, TArray<FKDFDiagnostic> Diagnostics)
+{
+	mDiagnostics.Append(MoveTemp(Diagnostics));
+	if (Record.mOps.IsEmpty())
+	{
+		return;
+	}
+	for (FKDFPatchRecord& Existing : mPatchRecords)
+	{
+		if (Existing.mPackRef == Record.mPackRef && Existing.mSourceFile == Record.mSourceFile &&
+			Existing.mRootType == Record.mRootType)
+		{
+			Existing.mOps.Append(MoveTemp(Record.mOps));
+			return;
+		}
+	}
+	mPatchRecords.Add(MoveTemp(Record));
+}
+
 FString UKDFSubsystem::BuildReportString() const
 {
 	int32 ErrorCount = 0;

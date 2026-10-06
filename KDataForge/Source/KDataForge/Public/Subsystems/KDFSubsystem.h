@@ -79,6 +79,8 @@ public:
 
 	const TArray<FKDFPatchRecord>& GetPatchRecords() const { return mPatchRecords; }
 
+	void RecordDeferredPatchResult(FKDFPatchRecord Record, TArray<FKDFDiagnostic> Diagnostics);
+
 	bool HasLoadedOnce() const { return bLoadedOnce; }
 
 	UClass* FindOrLoadClassCached(const FString& Path, FString& OutError);
