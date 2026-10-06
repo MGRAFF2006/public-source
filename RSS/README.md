@@ -65,7 +65,7 @@ RSS adds a large variety of sign types that attach to almost any surface in the 
 
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#e8a202;padding:6px 14px;border-radius:6px 6px 0 0;border:none"><strong style="color:#1a1a2e;font-size:18px">Powerful In-Game Editor</strong></td></tr></table>
 
-Every sign has an in-game editor where you can stack as many layers as you want. Each layer is a **text block**, an **image**, or an **animation effect**: mix and match freely.
+Every sign supports up to **128 layers** in the in-game editor. Each layer is a **text block**, an **image**, or an **animation effect**: mix and match freely.
 
 - **Text layers**: choose font, size, colour, alignment, bold, uppercase, letter spacing, and more
 - **Image layers**: use any in-game asset or paste a URL to load an image from the internet directly onto the sign; adjust size, tint, opacity, rotation, and z-order
