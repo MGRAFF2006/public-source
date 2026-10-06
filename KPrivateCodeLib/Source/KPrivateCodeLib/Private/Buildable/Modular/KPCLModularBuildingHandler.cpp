@@ -84,8 +84,7 @@ bool FAttachmentData::IsLocationFree(FTransform TestLocation, FTransform& OutLoc
 	{
 		const FAttachmentPointData& ClosestPoint = mAttachmentPointDatas[ClosestIndex];
 		OutLocation = ClosestPoint.mLocations;
-		return !ClosestPoint.IsAttached() && FVector::Distance(OutLocation.GetLocation(), FVector(0)) > 200.f &&
-			OutLocation.GetLocation().Z > -20000000;
+		return !ClosestPoint.IsAttached() && OutLocation.GetLocation().Z > -20000000;
 	}
 	return false;
 }
