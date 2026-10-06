@@ -310,6 +310,7 @@ bool UKDFCdoHandler::ApplyPatchEntry(const FKDFNode& Patch, FKDFApplyContext& Co
 					DeferredContext.mSourceFile = SourceFile;
 					DeferredContext.mPackRef = PackRef;
 					DeferredContext.bDebug = bDebug;
+					const FKDFValueCodec::FPackScope PackScope(PackRef);
 					Handler->ApplyPatchEntry(DeferredPatch.Get(), DeferredContext);
 					return false;
 				}));

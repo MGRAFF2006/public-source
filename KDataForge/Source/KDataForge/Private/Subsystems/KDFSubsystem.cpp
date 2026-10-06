@@ -1082,6 +1082,7 @@ void UKDFSubsystem::ApplyLazyWatchesToClass(UClass* NewClass, UObject* CDO)
 		Context.bDebug = Watch.bDebug;
 		Context.mDiagnostics = &mDiagnostics;
 		Context.mPatchRecord = &Record;
+		const FKDFValueCodec::FPackScope PackScope(Watch.mPackRef);
 		if (FKDFPatchUtil::ApplyOpsToObject(CDO, *Watch.mPropertiesNode, Context) && !Record.mOps.IsEmpty())
 		{
 			UE_LOG(LogKDataForge, Log, TEXT("Lazy-loaded class '%s' matched a watch from %s — CDO patched"),
