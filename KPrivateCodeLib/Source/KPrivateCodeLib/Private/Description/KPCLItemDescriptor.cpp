@@ -15,5 +15,5 @@ FText UKPCLItemDescriptor::GetItemDescriptionInternal() const
 
 FText UKPCLItemDescriptor::GetItemNameInternal() const
 {
-	return BP_GetItemNameInternal(Super::GetItemDescriptionInternal());
+	return BP_GetItemNameInternal(Super::GetItemNameInternal());
 }
