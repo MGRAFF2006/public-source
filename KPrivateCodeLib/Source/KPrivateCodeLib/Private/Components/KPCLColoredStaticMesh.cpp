@@ -173,7 +173,7 @@ void UKPCLColoredStaticMesh::UpdateStaticMesh(UKPCLColoredStaticMesh* Proxy, AAc
 			{
 				UKPCLColoredStaticMesh* NewProxy =
 					NewObject<UKPCLColoredStaticMesh>(Owner, NAME_None, RF_NoFlags, Proxy);
-				NewProxy->SetRelativeLocation(Proxy->GetRelativeLocation());
+				NewProxy->SetRelativeTransform(Proxy->GetRelativeTransform());
 				NewProxy->mShouldSave = Proxy->mShouldSave;
 				NewProxy->mStartWithDirtyState = true;
 				NewProxy->mCustomExtraData = Proxy->mCustomExtraData;
@@ -191,7 +191,7 @@ void UKPCLColoredStaticMesh::UpdateStaticMesh(UKPCLColoredStaticMesh* Proxy, AAc
 					  {
 						  UKPCLColoredStaticMesh* NewProxy =
 							  NewObject<UKPCLColoredStaticMesh>(Owner, NAME_None, RF_NoFlags, Proxy);
-						  NewProxy->SetRelativeLocation(Proxy->GetRelativeLocation());
+							  NewProxy->SetRelativeTransform(Proxy->GetRelativeTransform());
 						  NewProxy->mShouldSave = Proxy->mShouldSave;
 						  NewProxy->mStartWithDirtyState = true;
 						  NewProxy->mCustomExtraData = Proxy->mCustomExtraData;
