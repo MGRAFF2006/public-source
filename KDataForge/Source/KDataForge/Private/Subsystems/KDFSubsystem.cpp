@@ -908,7 +908,11 @@ void UKDFSubsystem::RegisterActorPatch(const FKDFActorPatch& Patch)
 {
 	mActorPatches.RemoveAll(
 		[&Patch](const FKDFActorPatch& Existing)
-		{ return Existing.mTargetClass == Patch.mTargetClass && Existing.mSourceFile == Patch.mSourceFile; });
+		{
+			return Existing.mTargetClass == Patch.mTargetClass && Existing.mSourceFile == Patch.mSourceFile &&
+				Existing.mPackRef == Patch.mPackRef && Existing.mPropertiesNode == Patch.mPropertiesNode &&
+				Existing.bIncludeSubclasses == Patch.bIncludeSubclasses;
+		});
 	mActorPatches.Add(Patch);
 }
 
@@ -916,7 +920,12 @@ void UKDFSubsystem::RegisterNodePurge(const FKDFNodePurge& Purge)
 {
 	mNodePurges.RemoveAll(
 		[&Purge](const FKDFNodePurge& Existing)
-		{ return Existing.mResourceClass == Purge.mResourceClass && Existing.mSourceFile == Purge.mSourceFile; });
+		{
+			return Existing.mResourceClass == Purge.mResourceClass && Existing.mSourceFile == Purge.mSourceFile &&
+				Existing.mPackRef == Purge.mPackRef && Existing.mNodeTypes == Purge.mNodeTypes &&
+				Existing.bAllowOccupied == Purge.bAllowOccupied &&
+				Existing.bRemoveFromScanner == Purge.bRemoveFromScanner;
+		});
 	mNodePurges.Add(Purge);
 }
 
@@ -924,7 +933,10 @@ void UKDFSubsystem::RegisterContentRemoval(const FKDFContentRemoval& Removal)
 {
 	mContentRemovals.RemoveAll(
 		[&Removal](const FKDFContentRemoval& Existing)
-		{ return Existing.mContentClass == Removal.mContentClass && Existing.mSourceFile == Removal.mSourceFile; });
+		{
+			return Existing.mContentClass == Removal.mContentClass && Existing.mSourceFile == Removal.mSourceFile &&
+				Existing.mPackRef == Removal.mPackRef && Existing.mKind == Removal.mKind;
+		});
 	mContentRemovals.Add(Removal);
 }
 
@@ -934,7 +946,9 @@ void UKDFSubsystem::RegisterLazyClassWatch(const FKDFLazyClassWatch& Watch)
 		[&Watch](const FKDFLazyClassWatch& Existing)
 		{
 			return Existing.mBaseClass == Watch.mBaseClass && Existing.mExactTargetPath == Watch.mExactTargetPath &&
-				Existing.mSourceFile == Watch.mSourceFile;
+				Existing.mSourceFile == Watch.mSourceFile && Existing.mPackRef == Watch.mPackRef &&
+				Existing.mPropertiesNode == Watch.mPropertiesNode && Existing.mMatchTags == Watch.mMatchTags &&
+				Existing.mTagPropertyName == Watch.mTagPropertyName;
 		});
 	mLazyClassWatches.Add(Watch);
 	bHasLazyClassWatches.store(true, std::memory_order_release);
