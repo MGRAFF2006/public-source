@@ -1093,8 +1093,8 @@ float AKPCLProducerBase::GetDefaultProductionCycleTime() const { return mProduct
 
 float AKPCLProducerBase::GetProductionProgress() const
 {
-	return mProductionHandle.mProductionTime > 0.f ? mProductionHandle.mCurrentTime / mProductionHandle.mProductionTime
-												   : 0.f;
+	const float ProductionTime = mProductionHandle.GetProductionTime();
+	return ProductionTime > 0.f ? FMath::Clamp(mProductionHandle.mCurrentTime / ProductionTime, 0.f, 1.f) : 0.f;
 }
 
 void AKPCLProducerBase::SetPendingPotential(float NewPendingPotential)
