@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Engine/GameInstance.h"
 #include "Misc/AutomationTest.h"
 #include "Subsystems/KDFSubsystem.h"
 #include "UObject/UObjectGlobals.h"
@@ -11,7 +12,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FKDFIncludeOrderTest, "KDataForge.Loader.Includ
 
 bool FKDFIncludeOrderTest::RunTest(const FString& Parameters)
 {
-	UKDFSubsystem* Subsystem = NewObject<UKDFSubsystem>();
+	UKDFSubsystem* Subsystem = NewObject<UKDFSubsystem>(NewObject<UGameInstance>());
 	const auto AddDocument = [Subsystem](const FString& File, const TArray<FString>& Includes, int32 PackOrder)
 	{
 		FKDFDocument& Document = Subsystem->mDocuments.AddDefaulted_GetRef();
