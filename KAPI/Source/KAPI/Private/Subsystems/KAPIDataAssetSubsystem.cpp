@@ -463,9 +463,9 @@ void UKAPIDataAssetSubsystem::StartScanForDataAssets()
 {
 	EmptyAssets();
 
-	ScanForAllowList();
 	ScanForCleanerAssets();
 	ScanForMinerAssets();
+	ScanForAllowList();
 	ScanForWidgetInjector();
 	ScanForAirCollectorDataAssets();
 	ScanForSlugs();
