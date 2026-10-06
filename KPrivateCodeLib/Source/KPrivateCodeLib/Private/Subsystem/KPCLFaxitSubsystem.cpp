@@ -142,6 +142,10 @@ int32 FKPCLMappedItemAmount::AddItemAmount(TSubclassOf<UFGItemDescriptor> InItem
 
 	FRWScopeLock WriteLock(mItemAmountsLock, SLT_Write);
 	int32 Amount = GetSpaceFor_NoLock(InItem, InAmount);
+	if (Amount <= 0)
+	{
+		return 0;
+	}
 	if (mItemAmounts.Contains(InItem))
 	{
 		mItemAmounts[InItem] += Amount;
@@ -160,7 +164,7 @@ int32 FKPCLMappedItemAmount::AddItemAmount(const FItemAmount& ItemAmount)
 
 int32 FKPCLMappedItemAmount::RemoveItemAmount(TSubclassOf<UFGItemDescriptor> InItem, int32 InAmount)
 {
-	if (!IsItemAllowed(InItem))
+	if (!IsItemAllowed(InItem) || InAmount <= 0)
 	{
 		return 0;
 	}
@@ -168,7 +172,7 @@ int32 FKPCLMappedItemAmount::RemoveItemAmount(TSubclassOf<UFGItemDescriptor> InI
 	FRWScopeLock WriteLock(mItemAmountsLock, SLT_Write);
 	if (mItemAmounts.Contains(InItem))
 	{
-		int32 AvailableAmount = mItemAmounts[InItem];
+		int32 AvailableAmount = FMath::Max(0, mItemAmounts[InItem]);
 		int32 RemovedAmount = FMath::Min(InAmount, AvailableAmount);
 		mItemAmounts[InItem] -= RemovedAmount;
 		if (mItemAmounts[InItem] <= 0)
@@ -182,24 +186,7 @@ int32 FKPCLMappedItemAmount::RemoveItemAmount(TSubclassOf<UFGItemDescriptor> InI
 
 int32 FKPCLMappedItemAmount::RemoveItemAmount(const FItemAmount& ItemAmount)
 {
-	if (!IsItemAllowed(ItemAmount.ItemClass))
-	{
-		return 0;
-	}
-
-	FRWScopeLock WriteLock(mItemAmountsLock, SLT_Write);
-	if (mItemAmounts.Contains(ItemAmount.ItemClass))
-	{
-		int32 AvailableAmount = mItemAmounts[ItemAmount.ItemClass];
-		int32 RemovedAmount = FMath::Min(ItemAmount.Amount, AvailableAmount);
-		mItemAmounts[ItemAmount.ItemClass] -= RemovedAmount;
-		if (mItemAmounts[ItemAmount.ItemClass] <= 0)
-		{
-			RemoveItemFromStorage_NoLock(ItemAmount.ItemClass);
-		}
-		return RemovedAmount;
-	}
-	return 0;
+	return RemoveItemAmount(ItemAmount.ItemClass, ItemAmount.Amount);
 }
 
 FItemAmount FKPCLMappedItemAmount::GetAmountOrCreateAmount(TSubclassOf<UFGItemDescriptor> InItem)

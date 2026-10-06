@@ -599,7 +599,8 @@ void AKPCLNetworkCore::GrabFromNetwork(AFGCharacterPlayer* Player, FItemAmount A
 		{
 
 			FScopeLock ScopeLock(&mMutex);
-			FItemAmount ItemAmount = mStorage.GetAmountOrCreateAmount(Amount.ItemClass);
+			bool bHasItem = false;
+			FItemAmount ItemAmount = mStorage.GetAmountConst(Amount.ItemClass, bHasItem);
 			if (ItemAmount.Amount <= 0)
 			{
 				return;
@@ -749,7 +750,8 @@ int32 AKPCLNetworkCore::TryToGrabItem(UFGInventoryComponent* Inventory, TSubclas
 	{
 
 		FScopeLock ScopeLock(&mMutex);
-		FItemAmount ItemAmount = mStorage.GetAmountOrCreateAmount(Item);
+		bool bHasItem = false;
+		FItemAmount ItemAmount = mStorage.GetAmountConst(Item, bHasItem);
 		if (ItemAmount.Amount <= 0)
 		{
 			return 0;
