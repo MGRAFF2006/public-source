@@ -57,12 +57,12 @@ void UKBFLWorldCDOContentRemover::ApplyToActorsInWorld()
 		}
 	}
 
-	if (!mRecipesInPath.IsEmpty() || !mRecipesInPathKeep.IsEmpty())
+	if (!mResearchTreesInPath.IsEmpty() || !mResearchTreesInPathKeep.IsEmpty())
 	{
 		for (const TSubclassOf<UFGResearchTree>& ResearchTree : AssetDataSubsystem->GetAllResearchTrees())
 		{
-			bool Keep = IsInPathList(ResearchTree, mRecipesInPathKeep);
-			bool Remove = IsInPathList(ResearchTree, mRecipesInPath);
+			bool Keep = IsInPathList(ResearchTree, mResearchTreesInPathKeep);
+			bool Remove = IsInPathList(ResearchTree, mResearchTreesInPath);
 
 			if (!Keep && Remove)
 			{
