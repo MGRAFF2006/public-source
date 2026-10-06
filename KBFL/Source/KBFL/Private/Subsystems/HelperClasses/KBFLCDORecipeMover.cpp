@@ -27,6 +27,11 @@ void UKBFLCDORecipeMover::ApplyToInstances()
 
 	for (TSubclassOf<UFGRecipe> Recipe : AssetSubsystem->GetAllRecipes())
 	{
+		if (RecipesToIgnore.Contains(Recipe))
+		{
+			continue;
+		}
+
 		TArray<TSubclassOf<UObject>> ProducedInRecipe = UFGRecipe::GetProducedIn(Recipe);
 		if (ProducedInRecipe.Contains(Target))
 		{
