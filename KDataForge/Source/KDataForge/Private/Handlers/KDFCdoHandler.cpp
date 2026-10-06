@@ -339,6 +339,11 @@ bool UKDFCdoHandler::ApplyPatchEntry(const FKDFNode& Patch, FKDFApplyContext& Co
 			*WorldTickHandle = FWorldDelegates::OnWorldTickStart.AddLambda(
 				[WorldTickHandle, WeakGameInstance, ScheduleNextTick](UWorld* World, ELevelTick, float)
 				{
+					if (!WeakGameInstance.IsValid())
+					{
+						FWorldDelegates::OnWorldTickStart.Remove(*WorldTickHandle);
+						return;
+					}
 					if (World == nullptr || !World->HasBegunPlay() ||
 						World->GetGameInstance() != WeakGameInstance.Get())
 					{
