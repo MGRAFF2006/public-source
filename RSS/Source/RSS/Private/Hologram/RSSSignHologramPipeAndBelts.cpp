@@ -125,7 +125,8 @@ void ARSSSignHologramPipeAndBelts::CheckValidPlacement()
 
 void ARSSSignHologramPipeAndBelts::OnBuildModeChanged(TSubclassOf<UFGHologramBuildModeDescriptor> buildMode)
 {
-	mIsMir = GetDefaultBuildGunMode() != mReversedBuildMode;
+	Super::OnBuildModeChanged(buildMode);
+	mIsMir = buildMode != mReversedBuildMode;
 }
 
 void ARSSSignHologramPipeAndBelts::HandlePipeSnap(const FHitResult& hitResult)
