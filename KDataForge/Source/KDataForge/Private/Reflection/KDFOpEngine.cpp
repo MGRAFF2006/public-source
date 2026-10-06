@@ -769,6 +769,12 @@ namespace
 			OutError = TEXT("Instanced object class is incompatible with the property type");
 			return false;
 		}
+		if (Class->HasAnyClassFlags(CLASS_Abstract))
+		{
+			OutError = FString::Printf(TEXT("Cannot instantiate abstract class %s; use a concrete Blueprint subclass"),
+									   *Class->GetPathName());
+			return false;
+		}
 		Property->SetObjectPropertyValue(ValuePtr, NewObject<UObject>(Outer, Class));
 		return true;
 	}

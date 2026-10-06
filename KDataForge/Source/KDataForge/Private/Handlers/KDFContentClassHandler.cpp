@@ -776,6 +776,14 @@ bool UKDFContentClassHandler::ApplyNodes(UObject* TreeCDO, const FKDFNode& Nodes
 							 Node.Line);
 			continue;
 		}
+		if (NodeClass->HasAnyClassFlags(CLASS_Abstract))
+		{
+			Context.AddError(
+				FString::Printf(TEXT("Cannot instantiate abstract class %s; use a concrete Blueprint subclass"),
+								*NodeClass->GetPathName()),
+				Node.Line);
+			continue;
+		}
 		if (Context.bDryRun)
 		{
 			continue;

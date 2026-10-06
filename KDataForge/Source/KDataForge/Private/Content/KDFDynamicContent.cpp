@@ -183,6 +183,12 @@ UObject* FKDFDynamicContentRegistry::GetOrCreateAsset(const FString& PackRef, co
 		OutError = TEXT("Invalid asset class");
 		return nullptr;
 	}
+	if (AssetClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		OutError = FString::Printf(TEXT("Cannot instantiate abstract class %s; use a concrete Blueprint subclass"),
+								   *AssetClass->GetPathName());
+		return nullptr;
+	}
 	if (!ValidateRuntimeIdentity(PackRef, Id, true, OutError))
 	{
 		return nullptr;
