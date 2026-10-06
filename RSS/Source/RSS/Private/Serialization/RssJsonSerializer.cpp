@@ -528,10 +528,11 @@ FString FRssJsonSerializer::CustomDataToJson(const FRssCustomDatas& CustomData)
 	for (const FRssCustomSignUrlData& Info : CustomData.mInformations)
 	{
 		TSharedPtr<FJsonObject> InfoJson = CustomSignUrlDataToJson(Info);
-		if (InfoJson.IsValid())
+		if (!InfoJson.IsValid())
 		{
-			InfoArray.Add(MakeShared<FJsonValueObject>(InfoJson));
+			return FString();
 		}
+		InfoArray.Add(MakeShared<FJsonValueObject>(InfoJson));
 	}
 
 	RootObject->SetArrayField(TEXT("informations"), InfoArray);
@@ -555,16 +556,12 @@ bool FRssJsonSerializer::JsonToCustomData(const FString& JsonString, FRssCustomD
 		return false;
 	}
 
-	OutCustomData.mInformations.Empty();
+	FRssCustomDatas Parsed;
 
 	const TArray<TSharedPtr<FJsonValue>>* InfoArray = nullptr;
-	if (!GetOptionalArray(RootObject, TEXT("informations"), InfoArray))
+	if (!GetOptionalArray(RootObject, TEXT("informations"), InfoArray) || !InfoArray)
 	{
 		return false;
-	}
-	if (!InfoArray)
-	{
-		return true;
 	}
 
 	for (const TSharedPtr<FJsonValue>& Value : *InfoArray)
@@ -581,14 +578,17 @@ bool FRssJsonSerializer::JsonToCustomData(const FString& JsonString, FRssCustomD
 		}
 
 		FRssCustomSignUrlData Info;
-		if (!JsonToCustomSignUrlData(InfoObj, Info))
+		FString Url;
+		if (!InfoObj->HasTypedField<EJson::String>(TEXT("url")) ||
+			!InfoObj->TryGetStringField(TEXT("url"), Url) || Url.IsEmpty() || !JsonToCustomSignUrlData(InfoObj, Info))
 		{
 			return false;
 		}
 
-		OutCustomData.mInformations.Add(Info);
+		Parsed.mInformations.Add(Info);
 	}
 
+	OutCustomData = MoveTemp(Parsed);
 	return true;
 }
 

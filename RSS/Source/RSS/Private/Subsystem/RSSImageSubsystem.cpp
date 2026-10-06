@@ -48,6 +48,7 @@ void ARSSImageSubsystem::BeginPlay()
 	CacheManager = URssImageCacheManager::Get(this);
 
 	FString Data;
+	bCatalogLoadFailed = FPlatformFileManager::Get().GetPlatformFile().FileExists(*GetFilePath());
 	if (ReadCustomDataFromFile(Data))
 	{
 
@@ -66,13 +67,24 @@ void ARSSImageSubsystem::BeginPlay()
 		else if (!TrimmedContent.IsEmpty() && CheckString(Data, {"mAllowedInSigns", "mUrl"}))
 		{
 
-			mInformation = CustomInformationStringToSignData(this, Data);
-			bLoadedCatalog = true;
-			bNeedsMigration = true;
+			FRssCustomDatas Parsed;
+			const TCHAR* End = FRssCustomDatas::StaticStruct()->ImportText(*Data, &Parsed, this,
+				PPF_Copy | PPF_Delimited | PPF_IncludeTransient, nullptr, "FRssCustomDatas");
+			if (End && FString(End).TrimStartAndEnd().IsEmpty())
+			{
+				FRssCustomDatas Validated;
+				if (FRssJsonSerializer::JsonToCustomData(FRssJsonSerializer::CustomDataToJson(Parsed), Validated))
+				{
+					mInformation = MoveTemp(Validated);
+					bLoadedCatalog = true;
+					bNeedsMigration = true;
+				}
+			}
 		}
 
 		if (bLoadedCatalog)
 		{
+			bCatalogLoadFailed = false;
 			GenerateMapFromInformationInVar();
 			for (auto Info : mInformation.mInformations)
 			{
@@ -89,6 +101,10 @@ void ARSSImageSubsystem::BeginPlay()
 		}
 	}
 
+	if (bCatalogLoadFailed)
+	{
+		UE_LOG(RSSImageSubsystemLog, Error, TEXT("RSS image catalog could not be loaded; preserving the existing file and disabling catalog writes until the file is recovered."));
+	}
 	bAllowToRunInitQuery = true;
 	TriggerIconExtraction();
 }
@@ -107,7 +123,7 @@ void ARSSImageSubsystem::Tick(float DeltaSeconds)
 		IconExtractor->TickExtractionQueue(DeltaSeconds);
 	}
 
-	if (bSaveDataDirty)
+	if (bSaveDataDirty && !bCatalogLoadFailed)
 	{
 		mSaveDirtyAccumulator += DeltaSeconds;
 		if (mSaveDirtyAccumulator >= mSaveDebounceTime)
@@ -422,6 +438,10 @@ bool ARSSImageSubsystem::SaveCustomDataToFile()
 
 bool ARSSImageSubsystem::SaveCustomDataToFileInternal()
 {
+	if (bCatalogLoadFailed)
+	{
+		return false;
+	}
 	const FString FilePath = GetFilePath();
 	GenerateInformation();
 

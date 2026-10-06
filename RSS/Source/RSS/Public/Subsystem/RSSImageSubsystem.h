@@ -141,6 +141,7 @@ public:
 	float mInitTimer = 0.f;
 
 	bool bSaveDataDirty = false;
+	bool bCatalogLoadFailed = false;
 	float mSaveDirtyAccumulator = 0.f;
 	static constexpr float mSaveDebounceTime = 2.0f;
 
