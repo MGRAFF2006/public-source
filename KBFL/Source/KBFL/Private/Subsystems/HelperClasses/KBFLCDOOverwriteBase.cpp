@@ -55,6 +55,7 @@ void UKBFLCDOOverwriteBase::Start()
 				  "ApplyToInstances: Overrides have already been applied for '{0}'. Skipping re-application. | Asset: "
 				  "{AssetPath}",
 				  *GetName(), AssetPath);
+		return;
 	}
 
 	LoadRequirements();
