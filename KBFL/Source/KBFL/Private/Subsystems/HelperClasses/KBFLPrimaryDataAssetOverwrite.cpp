@@ -441,7 +441,7 @@ void UKBFLPrimaryDataAssetOverwrite::ApplyCollectionProperty(FProperty* Property
 		FScriptSetHelper SourceSet(SetProp, ContainerValuePtr);
 		FScriptSetHelper DestSet(SetProp, DestValuePtr);
 
-		for (int32 i = 0; i < SourceSet.Num(); ++i)
+		for (int32 i = 0; i < SourceSet.GetMaxIndex(); ++i)
 		{
 			if (SourceSet.IsValidIndex(i))
 			{
@@ -460,7 +460,7 @@ void UKBFLPrimaryDataAssetOverwrite::ApplyCollectionProperty(FProperty* Property
 		FScriptMapHelper SourceMap(MapProp, ContainerValuePtr);
 		FScriptMapHelper DestMap(MapProp, DestValuePtr);
 
-		for (int32 i = 0; i < SourceMap.Num(); ++i)
+		for (int32 i = 0; i < SourceMap.GetMaxIndex(); ++i)
 		{
 			if (SourceMap.IsValidIndex(i))
 			{
