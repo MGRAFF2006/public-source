@@ -19,8 +19,9 @@ namespace
 {
 	AFGCharacterPlayer* GetRequestingCharacter(const UKBFLDefaultRCO* RCO)
 	{
-		const AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetTypedOuter<AFGPlayerController>() : nullptr;
-		if (!IsValid(Controller) || !Controller->HasAuthority() || Controller->GetWorld() != RCO->GetWorld())
+		const AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetOwnerPlayerController() : nullptr;
+		if (!IsValid(Controller) || !Controller->HasAuthority() || !IsValid(Controller->GetWorld()) ||
+			Controller->GetWorld() != RCO->GetWorld())
 		{
 			return nullptr;
 		}
@@ -30,8 +31,9 @@ namespace
 
 	bool HasDebugPermission(const UKBFLDefaultRCO* RCO)
 	{
-		const AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetTypedOuter<AFGPlayerController>() : nullptr;
-		if (!IsValid(Controller) || !Controller->HasAuthority() || Controller->GetWorld() != RCO->GetWorld())
+		const AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetOwnerPlayerController() : nullptr;
+		if (!IsValid(Controller) || !Controller->HasAuthority() || !IsValid(Controller->GetWorld()) ||
+			Controller->GetWorld() != RCO->GetWorld())
 		{
 			return false;
 		}
