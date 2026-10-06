@@ -67,7 +67,8 @@ private:
 	static void WriteTexture_RenderThread(FTexture2DDynamicResource* TextureResource, TArray64<uint8>* RawData,
 										  bool bUseSRGB = true);
 
-	void HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+	void HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded,
+							const TArray<uint8>& CompressedData);
 
 	UFUNCTION()
 	void OnCacheImageLoaded(const FString& Url, UTexture2DDynamic* Texture);

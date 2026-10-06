@@ -6,6 +6,7 @@
 #include "Engine/Texture2DDynamic.h"
 #include "HAL/PlatformFileManager.h"
 #include "HttpModule.h"
+#include "Http/RssImageResponseBuffer.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "Interfaces/IHttpResponse.h"
@@ -369,9 +370,12 @@ bool URssImageCacheManager::StartDownload(const FString& Url, bool bPersistent)
 	HttpRequest->SetURL(Url);
 	HttpRequest->SetVerb(TEXT("GET"));
 
+	TSharedRef<FRssImageResponseBuffer> Body =
+		MakeShared<FRssImageResponseBuffer>(static_cast<int32>(URssDownloadImage::MaxCompressedImageBytes));
+	const bool bStreamReady = HttpRequest->SetResponseBodyReceiveStream(Body);
 	TWeakObjectPtr<URssImageCacheManager> WeakThis(this);
 	HttpRequest->OnProcessRequestComplete().BindLambda(
-		[WeakThis, Url, bPersistent](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded)
+		[WeakThis, Url, bPersistent, Body](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded)
 		{
 			if (!WeakThis.IsValid())
 			{
@@ -383,10 +387,10 @@ bool URssImageCacheManager::StartDownload(const FString& Url, bool bPersistent)
 				WeakThis->PendingDownloads.Remove(Url);
 			}
 
-			if (bSucceeded && Response.IsValid() && EHttpResponseCodes::IsOk(Response->GetResponseCode()) &&
+			if (bSucceeded && !Body->IsError() && Response.IsValid() && EHttpResponseCodes::IsOk(Response->GetResponseCode()) &&
 				URssDownloadImage::IsSafeRemoteImageUrl(Response->GetURL()))
 			{
-				TArray<uint8> RawData = Response->GetContent();
+				const TArray<uint8>& RawData = Body->GetData();
 				if (RawData.IsEmpty() || RawData.Num() > URssDownloadImage::MaxCompressedImageBytes)
 				{
 					WeakThis->OnImageFailed.Broadcast(Url);
@@ -482,7 +486,7 @@ bool URssImageCacheManager::StartDownload(const FString& Url, bool bPersistent)
 			WeakThis->OnImageFailed.Broadcast(Url);
 		});
 
-	if (HttpRequest->ProcessRequest())
+	if (bStreamReady && HttpRequest->ProcessRequest())
 	{
 		return true;
 	}

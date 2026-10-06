@@ -5,6 +5,7 @@
 #include "Engine/Texture2D.h"
 #include "Engine/Texture2DDynamic.h"
 #include "HttpModule.h"
+#include "Http/RssImageResponseBuffer.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "IPAddress.h"
@@ -154,7 +155,18 @@ void URssDownloadImage::Start(FString URL)
 
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
 
-	HttpRequest->OnProcessRequestComplete().BindUObject(this, &URssDownloadImage::HandleImageRequest);
+	TSharedRef<FRssImageResponseBuffer> Body = MakeShared<FRssImageResponseBuffer>(static_cast<int32>(MaxCompressedImageBytes));
+	if (!HttpRequest->SetResponseBodyReceiveStream(Body))
+	{
+		OnFail.Broadcast(nullptr);
+		Cleanup();
+		return;
+	}
+	HttpRequest->OnProcessRequestComplete().BindWeakLambda(this,
+		[this, Body](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded)
+		{
+			HandleImageRequest(Request, Response, bSucceeded && !Body->IsError(), Body->GetData());
+		});
 	HttpRequest->SetURL(URL);
 	HttpRequest->SetVerb(TEXT("GET"));
 	HttpRequest->ProcessRequest();
@@ -164,7 +176,8 @@ void URssDownloadImage::Start(FString URL)
 #endif
 }
 
-void URssDownloadImage::HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+void URssDownloadImage::HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded,
+                                         const TArray<uint8>& CompressedData)
 {
 #if !UE_SERVER
 
@@ -175,7 +188,6 @@ void URssDownloadImage::HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpRes
 	{
 		IImageWrapperModule& ImageWrapperModule =
 			FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-		const TArray<uint8>& CompressedData = HttpResponse->GetContent();
 		if (CompressedData.IsEmpty() || CompressedData.Num() > MaxCompressedImageBytes)
 		{
 			OnFail.Broadcast(nullptr);
