@@ -41,11 +41,22 @@ void FPowerOptions::StructureTick(float dt, bool IsConsuming)
 	bIsRunning = IsConsuming;
 	if (bIsRunning)
 	{
-		mVariableTimer += dt;
-		if (mVariableTimer >= mVariablePowerTime)
+		if (!FMath::IsFinite(mVariablePowerTime) || mVariablePowerTime <= 0.f)
 		{
-			mVariableTimer -= mVariablePowerTime;
+			mVariableTimer = 0.f;
+			mCurrentPowerCurvePercent = 0.f;
+			return;
 		}
+		if (!FMath::IsFinite(dt) || dt < 0.f)
+		{
+			return;
+		}
+		if (!FMath::IsFinite(mVariableTimer) || mVariableTimer < 0.f)
+		{
+			mVariableTimer = 0.f;
+		}
+		mVariableTimer = FMath::Fmod(static_cast<double>(mVariableTimer) + dt,
+								   static_cast<double>(mVariablePowerTime));
 		mCurrentPowerCurvePercent = mVariableTimer / mVariablePowerTime;
 	}
 }
