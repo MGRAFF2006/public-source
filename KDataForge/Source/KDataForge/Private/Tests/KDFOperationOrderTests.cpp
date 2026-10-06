@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Engine/GameInstance.h"
 #include "Misc/AutomationTest.h"
 #include "Subsystems/KDFSubsystem.h"
 #include "UObject/UObjectGlobals.h"
@@ -11,7 +12,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FKDFOperationOrderTest, "KDataForge.Reporting.A
 
 bool FKDFOperationOrderTest::RunTest(const FString& Parameters)
 {
-	UKDFSubsystem* Subsystem = NewObject<UKDFSubsystem>();
+	UKDFSubsystem* Subsystem = NewObject<UKDFSubsystem>(NewObject<UGameInstance>());
 	const auto RecordOperation = [Subsystem](const FString& File)
 	{
 		FKDFPatchRecord Record;
