@@ -14,8 +14,8 @@ void UKLCustomColorLamp::UpdateColor(FLinearColor Colour)
 
 		FFactoryCustomizationData Data = IFGColorInterface::Execute_GetCustomizationData(GetOwner());
 		Data.Data[17] = Colour.R;
-		Data.Data[18] = Colour.R;
-		Data.Data[19] = Colour.R;
+		Data.Data[18] = Colour.G;
+		Data.Data[19] = Colour.B;
 		IFGColorInterface::Execute_SetCustomizationData(GetOwner(), Data);
 
 	}
