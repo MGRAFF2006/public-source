@@ -138,6 +138,9 @@ public:
 	const FKDFPatchRecord& GetEditorPatchRecord() const { return mEditorPatchRecord; }
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+	friend class FKDFIncludeOrderTest;
+#endif
 	void ScanAndParse();
 	void ApplyStages();
 	void SortStageDocuments(TArray<int32>& DocumentIndices) const;

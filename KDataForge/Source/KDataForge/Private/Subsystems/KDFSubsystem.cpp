@@ -399,33 +399,41 @@ void UKDFSubsystem::SortStageDocuments(TArray<int32>& DocumentIndices) const
 			return A.mRelativeFile < B.mRelativeFile;
 		});
 
-	for (int32 Pass = 0; Pass < DocumentIndices.Num(); ++Pass)
+	TArray<int32> Pending = MoveTemp(DocumentIndices);
+	while (!Pending.IsEmpty())
 	{
-		bool bChanged = false;
-		for (int32 Position = 0; Position < DocumentIndices.Num(); ++Position)
+		int32 ReadyPosition = INDEX_NONE;
+		const FString& PackRef = mDocuments[Pending[0]].mPackRef;
+		for (int32 Position = 0; Position < Pending.Num(); ++Position)
 		{
-			const FKDFDocument& Document = mDocuments[DocumentIndices[Position]];
-			for (const FString& Include : Document.mIncludeDependencies)
+			const FKDFDocument& Document = mDocuments[Pending[Position]];
+			if (Document.mPackRef != PackRef)
 			{
-				for (int32 Later = Position + 1; Later < DocumentIndices.Num(); ++Later)
+				break;
+			}
+			const bool bBlocked = Pending.ContainsByPredicate(
+				[this, &Document](const int32 CandidateIndex)
 				{
-					const FKDFDocument& Candidate = mDocuments[DocumentIndices[Later]];
-					if (Candidate.mPackRef == Document.mPackRef &&
-						DocumentMatchesInclude(Candidate.mRelativeFile, Include))
-					{
-						const int32 Moved = DocumentIndices[Position];
-						DocumentIndices.RemoveAt(Position);
-						DocumentIndices.Insert(Moved, Later);
-						bChanged = true;
-						break;
-					}
-				}
+					const FKDFDocument& Candidate = mDocuments[CandidateIndex];
+					return Candidate.mPackRef == Document.mPackRef &&
+						Document.mIncludeDependencies.ContainsByPredicate(
+							[&Candidate](const FString& Include)
+							{ return DocumentMatchesInclude(Candidate.mRelativeFile, Include); });
+				});
+			if (!bBlocked)
+			{
+				ReadyPosition = Position;
+				break;
 			}
 		}
-		if (!bChanged)
+		if (ReadyPosition == INDEX_NONE)
 		{
-			break;
+			UE_LOG(LogKDataForge, Warning, TEXT("Include dependency cycle in pack '%s'; using file order for the next document"),
+				*PackRef);
+			ReadyPosition = 0;
 		}
+		DocumentIndices.Add(Pending[ReadyPosition]);
+		Pending.RemoveAt(ReadyPosition);
 	}
 }
 
