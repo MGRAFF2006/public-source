@@ -125,7 +125,8 @@ FString ARSSNewTemplateSubsystem::TemplatesToString(UObject* WorldContext, FRssT
 {
 	const UScriptStruct* Struct = Templates.StaticStruct();
 	FString Output = TEXT("");
-	Struct->ExportText(Output, &Templates, new FRssTemplates, WorldContext,
+	const FRssTemplates DefaultTemplates;
+	Struct->ExportText(Output, &Templates, &DefaultTemplates, WorldContext,
 					   (PPF_ExportsNotFullyQualified | PPF_Copy | PPF_Delimited | PPF_IncludeTransient), nullptr);
 	return Output;
 }
