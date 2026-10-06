@@ -59,44 +59,51 @@ bool UKBFLCppInventoryHelper::CanStoreItemStackOnIndex(UFGInventoryComponent* In
 bool UKBFLCppInventoryHelper::CanStoreItemStacksOnIndex(UFGInventoryComponent* Inventory, int InvIndex,
 														TArray<FInventoryStack> Stacks)
 {
-	if (Inventory && InvIndex >= 0 && Stacks.Num() > 0)
-	{
-		for (auto Stack : Stacks)
-		{
-			if (!CanStoreItemStackOnIndex(Inventory, InvIndex, Stack))
-			{
-				return false;
-			}
-		}
-	}
-	if (!Inventory || InvIndex < 0)
+	if (!IsValid(Inventory) || !Inventory->IsValidIndex(InvIndex))
 	{
 		return false;
 	}
-	return true;
+	if (Stacks.IsEmpty())
+	{
+		return true;
+	}
+
+	const TSubclassOf<UFGItemDescriptor> ItemClass = Stacks[0].Item.GetItemClass();
+	int64 TotalAmount = 0;
+	for (const FInventoryStack& Stack : Stacks)
+	{
+		if (!Stack.HasItems() || !IsValid(ItemClass) || Stack.Item.GetItemClass() != ItemClass)
+		{
+			return false;
+		}
+		TotalAmount += Stack.NumItems;
+		if (TotalAmount > MAX_int32)
+		{
+			return false;
+		}
+	}
+
+	FInventoryStack ExistingStack;
+	Inventory->GetStackFromIndex(InvIndex, ExistingStack);
+	return (!ExistingStack.HasItems() || ExistingStack.Item.GetItemClass() == ItemClass) &&
+		Inventory->IsItemAllowed(ItemClass, InvIndex) &&
+		static_cast<int64>(ExistingStack.NumItems) + TotalAmount <= Inventory->GetSlotSize(InvIndex, ItemClass);
 }
 
 bool UKBFLCppInventoryHelper::CanStoreItemStacks(UFGInventoryComponent* Inventory, TArray<FInventoryStack> Stacks)
 {
-	if (Inventory && Stacks.Num() > 0)
-	{
-		for (auto Stack : Stacks)
-		{
-			if (!Stack.HasItems())
-			{
-				return false;
-			}
-			if (!Inventory->HasEnoughSpaceForStack(Stack))
-			{
-				return false;
-			}
-		}
-	}
-	if (!Inventory)
+	if (!IsValid(Inventory))
 	{
 		return false;
 	}
-	return true;
+	for (const FInventoryStack& Stack : Stacks)
+	{
+		if (!Stack.HasItems() || !IsValid(Stack.Item.GetItemClass()))
+		{
+			return false;
+		}
+	}
+	return Stacks.IsEmpty() || Inventory->HasEnoughSpaceForStacks(Stacks);
 }
 
 bool UKBFLCppInventoryHelper::CanStoreItemStack(UFGInventoryComponent* Inventory, FInventoryStack Stack)
