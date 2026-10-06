@@ -58,8 +58,18 @@ namespace
 				bAllValid = false;
 				continue;
 			}
+			int64 OverriddenValue = INDEX_NONE;
+			const FKDFNode* Overridden = Entry.Find(TEXT("overridden"));
+			if ((Overridden != nullptr && !Overridden->TryGetInt(OverriddenValue)) ||
+				PointsValue < MIN_int32 || PointsValue > MAX_int32 ||
+				OverriddenValue < MIN_int32 || OverriddenValue > MAX_int32)
+			{
+				Context.AddError(TEXT("Sink 'points' and 'overridden' must be integers within the int32 range"), Entry.Line);
+				bAllValid = false;
+				continue;
+			}
 			Parsed.mPoints = static_cast<int32>(PointsValue);
-			Parsed.mOverridden = static_cast<int32>(Entry.GetInt(TEXT("overridden"), INDEX_NONE));
+			Parsed.mOverridden = static_cast<int32>(OverriddenValue);
 			OutEntries.Add(MoveTemp(Parsed));
 		}
 		return bAllValid && !OutEntries.IsEmpty();
