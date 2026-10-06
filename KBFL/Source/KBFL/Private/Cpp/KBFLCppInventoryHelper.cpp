@@ -9,7 +9,7 @@
 bool UKBFLCppInventoryHelper::CanStoreItem(UFGInventoryComponent* Inventory, int InvIndex,
 										   TSubclassOf<UFGItemDescriptor> ItemClass, int Amount)
 {
-	if (Inventory)
+	if (Inventory && IsValid(ItemClass))
 	{
 		if (!Inventory->IsValidIndex(InvIndex))
 		{
@@ -31,11 +31,12 @@ bool UKBFLCppInventoryHelper::CanStoreItem(UFGInventoryComponent* Inventory, int
 				return false;
 			}
 
-			const int StackSize = Inventory->GetSlotSize(InvIndex);
-			if (lStack.NumItems >= StackSize || (lStack.NumItems + Amount) > StackSize)
-			{
-				return false;
-			}
+		}
+
+		const int32 StackSize = Inventory->GetSlotSize(InvIndex, ItemClass);
+		if (Amount <= 0 || static_cast<int64>(lStack.NumItems) + Amount > StackSize)
+		{
+			return false;
 		}
 	}
 	else
