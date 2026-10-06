@@ -6,6 +6,7 @@
 #include "KBFLLogging.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Misc/ScopeExit.h"
 #include "Subsystems/KBFLResourceNodeSubsystem.h"
 
 void UKBFLSpawnRequirement::OnInit_Implementation() {}
@@ -29,12 +30,6 @@ void UKBFLActorSpawnDescriptorBase::BeginSpawning()
 {
 	UE_LOGFMT(KBFLActorSpawnerLog, Log, "BeginSpawning called for descriptor: {0}", GetName());
 
-	if (!AreRequirementsMet())
-	{
-		UE_LOGFMT(KBFLActorSpawnerLog, Warning, "Skipping BeginSpawning for '{0}' - requirements not met", GetName());
-		return;
-	}
-
 	if (!CheckWorld())
 	{
 		UE_LOGFMT(KBFLActorSpawnerLog, Error, "BeginSpawning failed for '{0}' - CheckWorld failed", GetName());
@@ -44,6 +39,17 @@ void UKBFLActorSpawnDescriptorBase::BeginSpawning()
 	if (!mSubsystem)
 	{
 		UE_LOGFMT(KBFLActorSpawnerLog, Error, "BeginSpawning failed for '{0}' - Subsystem is null", GetName());
+		return;
+	}
+
+	InitRequirements();
+	ON_SCOPE_EXIT
+	{
+		ClearRequirements();
+	};
+	if (!AreRequirementsMet())
+	{
+		UE_LOGFMT(KBFLActorSpawnerLog, Warning, "Skipping BeginSpawning for '{0}' - requirements not met", GetName());
 		return;
 	}
 
@@ -96,17 +102,25 @@ void UKBFLActorSpawnDescriptorBase::BeginSpawning()
 
 	UE_LOGFMT(KBFLActorSpawnerLog, Log, "Descriptor '{0}' - cleaning up for garbage collection", GetName());
 
+	ClearRequirements();
 	this->RemoveFromRoot();
 	this->MarkAsGarbage();
 }
 void UKBFLActorSpawnDescriptorBase::InitRequirements()
 {
+	ClearRequirements();
 	for (TSubclassOf<UKBFLSpawnRequirement> SpawnRequirement : mSpawnRequirements)
 	{
+		if (!IsValid(SpawnRequirement) || SpawnRequirement->HasAnyClassFlags(CLASS_Abstract))
+		{
+			UE_LOGFMT(KBFLActorSpawnerLog, Error, "Invalid spawn requirement on descriptor '{0}'", GetName());
+			continue;
+		}
 		if (UKBFLSpawnRequirement* Requirement = NewObject<UKBFLSpawnRequirement>(this, SpawnRequirement))
 		{
-			Requirement->OnInit();
+			Requirement->mWorld = GetWorld();
 			mRequirements.Add(Requirement);
+			Requirement->OnInit();
 		}
 	}
 }
@@ -115,12 +129,21 @@ void UKBFLActorSpawnDescriptorBase::ClearRequirements()
 {
 	for (TObjectPtr<UKBFLSpawnRequirement> Requirement : mRequirements)
 	{
-		Requirement->OnClear();
+		if (IsValid(Requirement))
+		{
+			Requirement->OnClear();
+			Requirement->mWorld = nullptr;
+		}
 	}
-	mSpawnRequirements.Empty();
+	mRequirements.Empty();
 }
 bool UKBFLActorSpawnDescriptorBase::AreRequirementsMet()
 {
+	if (mRequirements.Num() != mSpawnRequirements.Num())
+	{
+		return false;
+	}
+
 	UE_LOGFMT(KBFLActorSpawnerLog, Log, "Checking requirements for descriptor '{0}' ({1} requirement(s))", GetName(),
 			  mRequirements.Num());
 
