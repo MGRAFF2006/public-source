@@ -13,7 +13,6 @@
 #include "FGSchematicManager.h"
 #include "Hologram/FGPowerPoleHologram.h"
 #include "Hologram/FGPowerPoleWallHologram.h"
-#include "HttpModule.h"
 #include "Network/Buildings/KPCLNetworkPole.h"
 #include "Network/Buildings/KPCLNetworkTower.h"
 #include "Network/KPCLNetworkCable.h"
@@ -74,19 +73,6 @@ void AddHiddenConnection(TCallScope<void (*)(UFGCircuitConnectionComponent*, UFG
 void FKPrivateCodeLib::StartupModule()
 {
 #if !WITH_EDITOR
-
-	GConfig->SetBool(TEXT("HTTP"), TEXT("bEnableServerCertificateVerification"), false, GEngineIni);
-	GConfig->SetBool(TEXT("HTTP"), TEXT("EnableServerCertificateVerification"), false, GEngineIni);
-	GConfig->SetBool(TEXT("HTTP"), TEXT("bVerifyPeer"), false, GEngineIni);
-	GConfig->SetBool(TEXT("HTTP"), TEXT("VerifyPeer"), false, GEngineIni);
-
-	if (FModuleManager::Get().IsModuleLoaded("HTTP"))
-	{
-		FHttpModule& HttpModule = FHttpModule::Get();
-
-		HttpModule.ToggleNullHttp(true);
-		HttpModule.ToggleNullHttp(false);
-	}
 
 	const TArray<FString> ModModuleNames = {"KBFL",
 											"RSS",
