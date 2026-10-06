@@ -58,6 +58,7 @@ struct FKDFPropertyRowData
 	FString mTextKey;
 	FString mTextSource;
 	EKDFRowKind mKind = EKDFRowKind::Complex;
+	bool bIsLocalizedText = false;
 	bool bIsCategory = false;
 	int32 mDepth = 0;
 	int32 mElementIndex = INDEX_NONE;

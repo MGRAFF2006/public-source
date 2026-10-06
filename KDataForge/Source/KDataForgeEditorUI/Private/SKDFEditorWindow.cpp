@@ -771,6 +771,20 @@ TSharedRef<SWidget> SKDFEditorWindow::MakeColorEditor(const FKDFPropertyRowPtr& 
 
 TSharedRef<SWidget> SKDFEditorWindow::MakeTextEditor(const FKDFPropertyRowPtr& Row)
 {
+	if (!Row->bIsLocalizedText)
+	{
+		return SNew(SMultiLineEditableTextBox)
+			.Text(FText::FromString(Row->mTextSource))
+			.AutoWrapText(true)
+			.OnTextCommitted_Lambda([this, Row](const FText& NewText, ETextCommit::Type CommitType)
+			{
+				if ((CommitType == ETextCommit::OnEnter || CommitType == ETextCommit::OnUserMovedFocus) &&
+					NewText.ToString() != Row->mTextSource)
+				{
+					CommitRow(Row, NewText.ToString());
+				}
+			});
+	}
 	if (Row->mTextKey.IsEmpty())
 	{
 

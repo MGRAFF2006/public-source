@@ -688,6 +688,7 @@ FKDFPropertyRowPtr UKDFEditorModel::BuildRow(const FString& Name, const FString&
 	case EKDFRowKind::Text:
 		if (const FTextProperty* TextProperty = CastField<FTextProperty>(Property))
 		{
+			Row->bIsLocalizedText = true;
 			const FText& Text = TextProperty->GetPropertyValue(ValuePtr);
 			if (const TOptional<FString> Key = FTextInspector::GetKey(Text))
 			{
@@ -702,6 +703,14 @@ FKDFPropertyRowPtr UKDFEditorModel::BuildRow(const FString& Name, const FString&
 			{
 				Row->mTextSource = Text.ToString();
 			}
+		}
+		else if (const FStrProperty* StringProperty = CastField<FStrProperty>(Property))
+		{
+			Row->mTextSource = StringProperty->GetPropertyValue(ValuePtr);
+		}
+		else if (const FNameProperty* NameProperty = CastField<FNameProperty>(Property))
+		{
+			Row->mTextSource = NameProperty->GetPropertyValue(ValuePtr).ToString();
 		}
 		break;
 	case EKDFRowKind::ObjectRef:
@@ -887,6 +896,11 @@ bool UKDFEditorModel::CommitRowValue(const FKDFPropertyRowPtr& Row, const FStrin
 bool UKDFEditorModel::CommitLocalizedText(const FKDFPropertyRowPtr& Row, const FString& Namespace, const FString& Key,
 										  const FString& Source, FString& OutMessage)
 {
+	if (!Row.IsValid() || !Row->bIsLocalizedText)
+	{
+		OutMessage = TEXT("Only FText properties support translation keys");
+		return false;
+	}
 	if (Key.IsEmpty())
 	{
 		OutMessage = TEXT("Translation key cannot be empty");

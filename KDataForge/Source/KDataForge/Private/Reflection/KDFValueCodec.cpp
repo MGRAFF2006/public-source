@@ -387,6 +387,11 @@ namespace
 			return true;
 		}
 
+		if ((Property->IsA<FStrProperty>() || Property->IsA<FNameProperty>()) && (Node.IsMap() || Node.IsSequence()))
+		{
+			OutError = TEXT("Expected a scalar for a string or name property");
+			return false;
+		}
 		if (const FStrProperty* StrProperty = CastField<FStrProperty>(Property))
 		{
 			StrProperty->SetPropertyValue(ValuePtr, Node.GetString());
