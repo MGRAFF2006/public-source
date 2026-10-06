@@ -39,11 +39,10 @@ void UKPCLJsonObject::CreateJsonFromUrl(FString Url, TMap<FString, FString> Head
 	Request->OnProcessRequestComplete().BindLambda(
 		[this, Url, Headers, Method, PostContent](FHttpRequestPtr InRequest, FHttpResponsePtr Response, bool bSuccess)
 		{
-			UE_LOG(LogKPCL, Warning, TEXT("Request was to %s: %d"), *Url, bSuccess)
+			UE_LOG(LogKPCL, Verbose, TEXT("HTTP request completed: transport success=%d"), bSuccess);
 			bLastRequestWasSuccessful = false;
 			if (bSuccess)
 			{
-				UE_LOG(LogKPCL, Warning, TEXT("Request Content from %s: %s"), *Url, *Response->GetContentAsString())
 				bLastRequestWasSuccessful = FJsonSerializer::Deserialize(
 					TJsonReaderFactory<>::Create(Response->GetContentAsString()), mJsonObject);
 				if (bLastRequestWasSuccessful)

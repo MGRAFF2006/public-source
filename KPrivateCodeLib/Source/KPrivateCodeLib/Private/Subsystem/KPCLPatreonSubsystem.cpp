@@ -171,7 +171,6 @@ void UKPCLPatreonSubsystem::Query()
 
 			QueryApi(Request, "HasBenefits", {mCode, mDiscordID});
 		}
-		UE_LOG(LogTemp, Error, TEXT("%s / %s"), *mCode, *mDiscordID);
 	}
 }
 
@@ -194,8 +193,6 @@ void UKPCLPatreonSubsystem::QueryApi(FHttpRequestRef& Request, FString QueryName
 			Url.Append("/");
 		}
 	}
-
-	UE_LOG(LogTemp, Error, TEXT("QueryApi %s"), *Url);
 
 	Request->SetURL(Url);
 	Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
