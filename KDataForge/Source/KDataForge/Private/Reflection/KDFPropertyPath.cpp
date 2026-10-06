@@ -94,9 +94,16 @@ bool FKDFPropertyPath::Parse(const FString& PathString, FKDFPropertyPath& OutPat
 				}
 				if (Token.IsNumeric())
 				{
+					TCHAR* IndexEnd = nullptr;
+					const int64 Index = FCString::Strtoi64(*Token, &IndexEnd, 10);
+					if (IndexEnd == *Token || *IndexEnd != TEXT('\0') || Index < MIN_int32 || Index > MAX_int32)
+					{
+						OutError = FString::Printf(TEXT("Invalid property path '%s': index must be an int32 integer"), *PathString);
+						return false;
+					}
 					FKDFPathSegment& IndexSegment = OutPath.mSegments.AddDefaulted_GetRef();
 					IndexSegment.mKind = EKDFPathSegmentKind::Index;
-					IndexSegment.mIndex = FCString::Atoi(*Token);
+					IndexSegment.mIndex = static_cast<int32>(Index);
 				}
 				else
 				{

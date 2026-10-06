@@ -873,8 +873,22 @@ bool FKDFOpEngine::ParseOpEntry(const FKDFNode& Entry, FString& OutPathString, E
 	}
 	OutArgs = FKDFOpArgs();
 	OutArgs.mValue = Entry.Find(TEXT("value"));
-	OutArgs.mIndexA = static_cast<int32>(Entry.GetInt(TEXT("index"), INDEX_NONE));
-	OutArgs.mIndexB = static_cast<int32>(Entry.GetInt(TEXT("with"), INDEX_NONE));
+	const auto ReadIndex = [&Entry, &OutError](const TCHAR* Key, int32& OutIndex)
+	{
+		const FKDFNode* Node = Entry.Find(Key);
+		int64 Value = INDEX_NONE;
+		if (Node != nullptr && (!Node->TryGetInt(Value) || Value < MIN_int32 || Value > MAX_int32))
+		{
+			OutError = FString::Printf(TEXT("'%s' must be an integer within the int32 range"), Key);
+			return false;
+		}
+		OutIndex = static_cast<int32>(Value);
+		return true;
+	};
+	if (!ReadIndex(TEXT("index"), OutArgs.mIndexA) || !ReadIndex(TEXT("with"), OutArgs.mIndexB))
+	{
+		return false;
+	}
 	OutArgs.mMin = Entry.Find(TEXT("min"));
 	OutArgs.mMax = Entry.Find(TEXT("max"));
 	OutArgs.mFromPath = Entry.GetString(TEXT("from"), FString());
