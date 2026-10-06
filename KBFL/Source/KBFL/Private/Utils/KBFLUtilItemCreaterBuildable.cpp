@@ -7,10 +7,51 @@
 #include "Cpp/KBFLCppInventoryHelper.h"
 #include "FGCharacterPlayer.h"
 #include "FGFactoryConnectionComponent.h"
+#include "FGGameSession.h"
+#include "Engine/World.h"
+#include "GameFramework/GameModeBase.h"
 #include "FGPlayerController.h"
 #include "FGPowerInfoComponent.h"
 
 #include "Net/UnrealNetwork.h"
+
+namespace
+{
+	AFGCharacterPlayer* GetRequestingCharacter(const UKBFLDefaultRCO* RCO)
+	{
+		const AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetTypedOuter<AFGPlayerController>() : nullptr;
+		if (!IsValid(Controller) || !Controller->HasAuthority() || Controller->GetWorld() != RCO->GetWorld())
+		{
+			return nullptr;
+		}
+		AFGCharacterPlayer* Player = Cast<AFGCharacterPlayer>(Controller->GetControlledCharacter());
+		return IsValid(Player) && Player->GetWorld() == RCO->GetWorld() ? Player : nullptr;
+	}
+
+	bool HasDebugPermission(const UKBFLDefaultRCO* RCO)
+	{
+		const AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetTypedOuter<AFGPlayerController>() : nullptr;
+		if (!IsValid(Controller) || !Controller->HasAuthority() || Controller->GetWorld() != RCO->GetWorld())
+		{
+			return false;
+		}
+		if (Controller->IsLocalController())
+		{
+			return true;
+		}
+		const AGameModeBase* GameMode = IsValid(Controller->GetWorld()) ? Controller->GetWorld()->GetAuthGameMode() : nullptr;
+		const AFGGameSession* Session = IsValid(GameMode) ? Cast<AFGGameSession>(GameMode->GameSession) : nullptr;
+		return IsValid(Session) && Session->IsPlayerAdmin(Controller);
+	}
+
+	bool CanConfigureDebugBuilding(const UKBFLDefaultRCO* RCO, AKBFLUtilItemCreaterBuildable* Building)
+	{
+		AFGCharacterPlayer* Player = GetRequestingCharacter(RCO);
+		return IsValid(Player) && IsValid(Building) && Building->HasAuthority() &&
+			Building->GetWorld() == Player->GetWorld() && HasDebugPermission(RCO) &&
+			Building->GetInteractingPlayers().Contains(Player);
+	}
+}
 
 AKBFLUtilItemCreaterBuildable::AKBFLUtilItemCreaterBuildable() :
 	mPipeInput(nullptr), mPipeOutput(nullptr), mBeltInput(nullptr), mBeltOutput(nullptr)
@@ -193,7 +234,7 @@ void AKBFLUtilItemCreaterBuildable::GetConditionalReplicatedProps(TArray<FFGCond
 void UKBFLDefaultRCO::Server_AddStackToCharacter_Implementation(AFGCharacterPlayer* Player,
 																TSubclassOf<UFGItemDescriptor> ItemToAdd)
 {
-	if (Player && ItemToAdd)
+	if (IsValid(Player) && Player == GetRequestingCharacter(this) && HasDebugPermission(this) && IsValid(ItemToAdd))
 	{
 		FInventoryStack Stack = FInventoryStack(UFGItemDescriptor::GetStackSize(ItemToAdd), ItemToAdd);
 		if (Player->GetInventory())
@@ -207,7 +248,7 @@ void UKBFLDefaultRCO::Server_AddStackToCharacter_Implementation(AFGCharacterPlay
 void UKBFLDefaultRCO::Server_CheatBuilding_SetBeltItem_Implementation(AKBFLUtilItemCreaterBuildable* Building,
 																	  TSubclassOf<UFGItemDescriptor> ItemToSet)
 {
-	if (Building && ItemToSet)
+	if (CanConfigureDebugBuilding(this, Building) && IsValid(ItemToSet))
 	{
 		Building->SetBeltItem(ItemToSet);
 		Building->ForceNetUpdate();
@@ -217,7 +258,7 @@ void UKBFLDefaultRCO::Server_CheatBuilding_SetBeltItem_Implementation(AKBFLUtilI
 void UKBFLDefaultRCO::Server_CheatBuilding_SetPipeItem_Implementation(AKBFLUtilItemCreaterBuildable* Building,
 																	  TSubclassOf<UFGItemDescriptor> ItemToSet)
 {
-	if (Building && ItemToSet)
+	if (CanConfigureDebugBuilding(this, Building) && IsValid(ItemToSet))
 	{
 		Building->SetPipeItem(ItemToSet);
 		Building->ForceNetUpdate();
@@ -233,7 +274,7 @@ void UKBFLDefaultRCO::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 void UKBFLDefaultRCO::Server_ClearCharacterInventory_Implementation(AFGCharacterPlayer* Player)
 {
-	if (Player)
+	if (IsValid(Player) && Player == GetRequestingCharacter(this) && HasDebugPermission(this))
 	{
 		if (Player->GetInventory())
 		{
