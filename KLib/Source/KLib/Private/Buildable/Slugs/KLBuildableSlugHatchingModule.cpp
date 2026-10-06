@@ -209,6 +209,11 @@ void AKLBuildableSlugHatchingModule::UpdateIncubatorVisuals()
 	if (AKLBuildableSlugHatching* Hatchery = GetMasterBuildable<AKLBuildableSlugHatching>())
 	{
 		UKAPISugHatchingData* HatchingData = Hatchery->GetHatchingData();
+		if (!IsValid(HatchingData))
+		{
+			return;
+		}
+
 		if (UKPCLColoredStaticMesh* ColoredMesh = FindComponentByClass<UKPCLColoredStaticMesh>())
 		{
 			ColoredMesh->ApplyNewLinearColorData(FKPCLLinearColorData(0, HatchingData->mEggColor));
