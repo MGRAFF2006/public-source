@@ -77,7 +77,7 @@ void UKPCLPatreonSubsystem::OnSettingChanged()
 			bActivePatreonButton = PropertyBool->Value;
 		}
 
-		PropertyBool = UKBFL_ConfigTools::GetPropertyByKey<UConfigPropertyBool>(mConfig, "PatreonList", GetWorld());
+		PropertyBool = UKBFL_ConfigTools::GetPropertyByKey<UConfigPropertyBool>(mConfig, "NewsFeed", GetWorld());
 		if (IsValid(PropertyBool))
 		{
 			bActiveNewsFeed = PropertyBool->Value;
