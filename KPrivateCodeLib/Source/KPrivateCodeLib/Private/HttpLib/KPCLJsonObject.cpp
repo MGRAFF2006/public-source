@@ -119,10 +119,13 @@ bool UKPCLJsonObject::TryGetFloat(FString StringField, float& Result)
 		return false;
 	}
 
-	double Num;
-	const bool Success = GetJson()->TryGetNumberField(StringField, Num);
-	Result = Num;
-	return Success;
+	double Num = 0.0;
+	if (!GetJson()->TryGetNumberField(StringField, Num) || !FMath::IsFinite(Num) || Num < -MAX_flt || Num > MAX_flt)
+	{
+		return false;
+	}
+	Result = static_cast<float>(Num);
+	return true;
 }
 
 bool UKPCLJsonObject::TryGetInt(FString StringField, int& Result)
@@ -132,10 +135,13 @@ bool UKPCLJsonObject::TryGetInt(FString StringField, int& Result)
 		return false;
 	}
 
-	double Num;
-	const bool Success = GetJson()->TryGetNumberField(StringField, Num);
-	Result = Num;
-	return Success;
+	double Num = 0.0;
+	if (!GetJson()->TryGetNumberField(StringField, Num) || !FMath::IsFinite(Num) || Num < MIN_int32 || Num > MAX_int32)
+	{
+		return false;
+	}
+	Result = static_cast<int>(Num);
+	return true;
 }
 
 bool UKPCLJsonObject::TryGetStringArray(FString StringField, TArray<FString>& Result)
