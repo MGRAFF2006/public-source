@@ -134,7 +134,7 @@ bool UKDFSinkPointsHandler::ApplyDocument(const FKDFNode& Document, FKDFApplyCon
 		Row.ItemClass = ItemClass;
 		Row.Points = Entry.mPoints;
 		Row.OverriddenResourceSinkPoints = Entry.mOverridden;
-		Table->AddRow(FName(*ItemClass->GetName()), Row);
+		Table->AddRow(FName(*ItemClass->GetPathName()), Row);
 
 		++Context.mAppliedOpCount;
 		if (Context.mPatchRecord != nullptr)
