@@ -37,7 +37,8 @@ void AKBFLLocationSubsystem::SaveLocationsToFile()
 
 		const UScriptStruct* Struct = Result.Value.StaticStruct();
 		FString FileContent;
-		Struct->ExportText(FileContent, &Result.Value, new FKBFLTransformArray, this,
+		const FKBFLTransformArray DefaultValue;
+		Struct->ExportText(FileContent, &Result.Value, &DefaultValue, this,
 						   (PPF_ExportsNotFullyQualified | PPF_Copy | PPF_Delimited | PPF_IncludeTransient), nullptr);
 
 		UE_LOG(LogTemp, Warning, TEXT("SaveLocationsToFile: %d"),
