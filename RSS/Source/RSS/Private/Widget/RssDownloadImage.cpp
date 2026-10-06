@@ -82,14 +82,9 @@ URssDownloadImage* URssDownloadImage::DownloadImage(UObject* WorldContextObject,
 	DownloadTask->bUseCache = bUseCache;
 	DownloadTask->bPersistToCache = bPersistToCache;
 
-	if (bUseCache && WorldContextObject)
-	{
-		DownloadTask->StartWithCache(URL, WorldContextObject);
-	}
-	else
-	{
-		DownloadTask->Start(URL);
-	}
+	DownloadTask->CurrentUrl = MoveTemp(URL);
+	DownloadTask->ActivationWorldContext = WorldContextObject;
+	DownloadTask->bPendingActivation = true;
 
 	return DownloadTask;
 }
@@ -98,9 +93,30 @@ URssDownloadImage* URssDownloadImage::DownloadImageNoCache(FString URL)
 {
 	URssDownloadImage* DownloadTask = NewObject<URssDownloadImage>();
 	DownloadTask->bUseCache = false;
-	DownloadTask->Start(URL);
+	DownloadTask->CurrentUrl = MoveTemp(URL);
+	DownloadTask->bPendingActivation = true;
 
 	return DownloadTask;
+}
+
+void URssDownloadImage::Activate()
+{
+	Super::Activate();
+	if (!bPendingActivation)
+	{
+		return;
+	}
+	bPendingActivation = false;
+	UObject* WorldContextObject = ActivationWorldContext.Get();
+	ActivationWorldContext.Reset();
+	if (bUseCache && WorldContextObject)
+	{
+		StartWithCache(CurrentUrl, WorldContextObject);
+	}
+	else
+	{
+		Start(CurrentUrl);
+	}
 }
 
 void URssDownloadImage::WriteTexture_RenderThread(FTexture2DDynamicResource* TextureResource, TArray64<uint8>* RawData,
@@ -144,6 +160,7 @@ void URssDownloadImage::WriteTexture_RenderThread(FTexture2DDynamicResource* Tex
 
 void URssDownloadImage::Start(FString URL)
 {
+	bPendingActivation = false;
 #if !UE_SERVER
 	if (!IsSafeRemoteImageUrl(URL))
 	{
@@ -243,6 +260,7 @@ void URssDownloadImage::HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpRes
 
 void URssDownloadImage::StartWithCache(FString URL, UObject* WorldContextObject)
 {
+	bPendingActivation = false;
 #if !UE_SERVER
 	if (!IsSafeRemoteImageUrl(URL))
 	{

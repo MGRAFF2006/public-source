@@ -49,6 +49,8 @@ class RSS_API URssDownloadImage : public UBlueprintAsyncActionBase
 	UPROPERTY()
 	FString CurrentUrl;
 
+	virtual void Activate() override;
+
 	void Start(FString URL);
 	void StartWithCache(FString URL, UObject* WorldContextObject);
 
@@ -75,5 +77,9 @@ private:
 	UFUNCTION()
 	void OnCacheImageFailed(const FString& Url);
 
+	UPROPERTY(Transient)
+	TWeakObjectPtr<UObject> ActivationWorldContext;
+
+	bool bPendingActivation = false;
 	bool bWaitingForCache = false;
 };
