@@ -245,6 +245,11 @@ void UKAPIDataAssetSubsystem::ScanForAllowList()
 	{
 		for (TSubclassOf<UFGResourceDescriptor> AllowedResource : Object->mAllowedResources)
 		{
+			if (!IsValid(AllowedResource))
+			{
+				UE_LOG(LogKApi, Warning, TEXT("Skipping invalid resource entry in allowlist %s"), *Object->GetPathName());
+				continue;
+			}
 			mAllowedScannableResources.Add(AllowedResource);
 		}
 
@@ -255,6 +260,11 @@ void UKAPIDataAssetSubsystem::ScanForAllowList()
 
 		for (TSubclassOf<AFGBuildableResourceExtractorBase> AllowedResource : Object->mAllowedExtractors)
 		{
+			if (!IsValid(AllowedResource))
+			{
+				UE_LOG(LogKApi, Warning, TEXT("Skipping invalid extractor entry in allowlist %s"), *Object->GetPathName());
+				continue;
+			}
 			mAllowedResourceExtractors.Add(AllowedResource);
 		}
 
