@@ -102,7 +102,6 @@ void UKBFLActorSpawnDescriptorBase::BeginSpawning()
 
 	UE_LOGFMT(KBFLActorSpawnerLog, Log, "Descriptor '{0}' - cleaning up for garbage collection", GetName());
 
-	ClearRequirements();
 	this->RemoveFromRoot();
 	this->MarkAsGarbage();
 }
