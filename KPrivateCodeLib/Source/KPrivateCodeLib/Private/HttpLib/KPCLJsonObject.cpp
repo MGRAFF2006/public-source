@@ -4,6 +4,8 @@
 
 #include "HttpLib/KPCLJsonObject.h"
 
+#include "Async/Async.h"
+#include "HAL/ThreadSafeCounter.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
@@ -36,30 +38,51 @@ void UKPCLJsonObject::CreateJsonFromUrl(FString Url, TMap<FString, FString> Head
 	HttpModule.UpdateConfigs();
 
 	FHttpRequestRef Request = HttpModule.CreateRequest();
-	Request->OnProcessRequestComplete().BindLambda(
-		[this, Url, Headers, Method, PostContent](FHttpRequestPtr InRequest, FHttpResponsePtr Response, bool bSuccess)
+	TWeakObjectPtr<UKPCLJsonObject> WeakThis(this);
+	TSharedRef<FThreadSafeCounter, ESPMode::ThreadSafe> CompletionCount =
+		MakeShared<FThreadSafeCounter, ESPMode::ThreadSafe>();
+	auto CompleteRequest = [WeakThis, CompletionCount, Url, Headers, Method, PostContent](
+		FHttpRequestPtr InRequest, FHttpResponsePtr Response, bool bSuccess)
+	{
+		if (CompletionCount->Increment() != 1)
 		{
+			return;
+		}
+		auto ApplyResult = [WeakThis, Url, Headers, Method, PostContent, Response, bSuccess]()
+		{
+			UKPCLJsonObject* Object = WeakThis.Get();
+			if (!Object)
+			{
+				return;
+			}
 			UE_LOG(LogKPCL, Warning, TEXT("Request was to %s: %d"), *Url, bSuccess)
-			bLastRequestWasSuccessful = false;
-			if (bSuccess)
+			Object->bLastRequestWasSuccessful = false;
+			if (bSuccess && Response.IsValid())
 			{
 				UE_LOG(LogKPCL, Warning, TEXT("Request Content from %s: %s"), *Url, *Response->GetContentAsString())
-				bLastRequestWasSuccessful = FJsonSerializer::Deserialize(
-					TJsonReaderFactory<>::Create(Response->GetContentAsString()), mJsonObject);
-				if (bLastRequestWasSuccessful)
+				Object->bLastRequestWasSuccessful = FJsonSerializer::Deserialize(
+					TJsonReaderFactory<>::Create(Response->GetContentAsString()), Object->mJsonObject);
+				if (Object->bLastRequestWasSuccessful)
 				{
-					mRequestHeaders = Headers;
-					mRequestUrl = Url;
-					mRequestMethod = Method;
-					mRequestContent = PostContent;
+					Object->mRequestHeaders = Headers;
+					Object->mRequestUrl = Url;
+					Object->mRequestMethod = Method;
+					Object->mRequestContent = PostContent;
 				}
 			}
 
-			if (OnHttpRequestComplete.IsBound())
-			{
-				OnHttpRequestComplete.Broadcast(bLastRequestWasSuccessful);
-			}
-		});
+			Object->OnHttpRequestComplete.Broadcast(Object->bLastRequestWasSuccessful);
+		};
+		if (IsInGameThread())
+		{
+			ApplyResult();
+		}
+		else
+		{
+			AsyncTask(ENamedThreads::GameThread, MoveTemp(ApplyResult));
+		}
+	};
+	Request->OnProcessRequestComplete().BindLambda(CompleteRequest);
 
 	Request->SetURL(Url);
 	for (auto Header : Headers)
@@ -79,7 +102,10 @@ void UKPCLJsonObject::CreateJsonFromUrl(FString Url, TMap<FString, FString> Head
 
 	Request->SetVerb(Method == EHttpRequest::GET ? "GET" : "POST");
 	Request->SetContentAsString(PostContent);
-	Request->ProcessRequest();
+	if (!Request->ProcessRequest())
+	{
+		CompleteRequest(Request, nullptr, false);
+	}
 }
 
 bool UKPCLJsonObject::TryRedoRequest()
