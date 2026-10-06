@@ -85,7 +85,7 @@ void FKDFPatchUtil::LogAppliedOp(const FString& SourceFile, const UObject* Targe
 void FKDFPatchUtil::PostWriteFixups(UObject* Target, const FString& PropertyPath)
 {
 
-	if (PropertyPath.EndsWith(TEXT("mStackSize")))
+	if (PropertyPath.EndsWith(TEXT("mStackSize"), ESearchCase::IgnoreCase))
 	{
 		if (UFGItemDescriptor* ItemDescriptor = Cast<UFGItemDescriptor>(Target))
 		{
