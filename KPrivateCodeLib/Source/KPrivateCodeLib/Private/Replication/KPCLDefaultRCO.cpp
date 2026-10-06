@@ -7,6 +7,7 @@
 #include "Buildable/KPCLExtractorBase.h"
 #include "Buildable/KPCLPressureRegulatorValve.h"
 #include "Buildable/KPCLProducerBase.h"
+#include "Buildable/Modular/KPCLModularBuildingBase.h"
 #include "FGCharacterPlayer.h"
 #include "FGGameSession.h"
 #include "FGPlayerController.h"
@@ -40,8 +41,22 @@ namespace
 	bool CanInteractWithBuilding(const UKPCLDefaultRCO* RCO, const AFGBuildable* Building)
 	{
 		AFGCharacterPlayer* Player = GetRequestingPlayer(RCO);
-		return IsValid(Player) && IsValid(Building) && Building->HasAuthority() &&
-			Building->GetWorld() == RCO->GetWorld() && Building->GetInteractingPlayers().Contains(Player);
+		if (!IsValid(Player) || !IsValid(Building) || !Building->HasAuthority() ||
+			Building->GetWorld() != RCO->GetWorld())
+		{
+			return false;
+		}
+		const AFGBuildable* InteractionBuilding = Building;
+		if (const AKPCLModularBuildingBase* Modular = Cast<AKPCLModularBuildingBase>(Building))
+		{
+			AFGBuildable* Master = Modular->GetMasterBuildable();
+			if (Modular->mShouldUseUiFromMaster && IsValid(Master) && Master != Building)
+			{
+				InteractionBuilding = Master;
+			}
+		}
+		return InteractionBuilding->HasAuthority() && InteractionBuilding->GetWorld() == RCO->GetWorld() &&
+			InteractionBuilding->GetInteractingPlayers().Contains(Player);
 	}
 
 	bool CanAccessInventory(const UKPCLDefaultRCO* RCO, const UFGInventoryComponent* Inventory)
