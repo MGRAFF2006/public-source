@@ -866,6 +866,11 @@ bool UKDFSubsystem::RestorePropertyText(UObject* Target, const FString& Property
 		OutError = FString::Printf(TEXT("Could not restore '%s'"), *PropertyPath);
 		return false;
 	}
+	if (Resolved.mOwningSetProperty != nullptr && Resolved.mOwningSetValuePtr != nullptr)
+	{
+		FScriptSetHelper(Resolved.mOwningSetProperty, Resolved.mOwningSetValuePtr).Rehash();
+	}
+	FKDFPatchUtil::PostWriteFixups(Target, PropertyPath);
 	if (Target->IsA<UDataAsset>())
 	{
 		MarkDataAssetsChanged();
