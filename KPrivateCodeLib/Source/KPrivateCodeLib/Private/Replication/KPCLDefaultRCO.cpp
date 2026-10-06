@@ -23,7 +23,7 @@ namespace
 {
 	AFGPlayerController* GetRequestingController(const UKPCLDefaultRCO* RCO)
 	{
-		AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetTypedOuter<AFGPlayerController>() : nullptr;
+		AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetOwnerPlayerController() : nullptr;
 		return IsValid(Controller) && Controller->HasAuthority() && IsValid(Controller->GetWorld()) &&
 			Controller->GetWorld() == RCO->GetWorld()
 			? Controller
