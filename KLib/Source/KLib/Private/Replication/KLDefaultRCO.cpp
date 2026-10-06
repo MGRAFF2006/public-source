@@ -21,8 +21,9 @@ namespace
 		{
 			return false;
 		}
-		const AFGPlayerController* Controller = RCO->GetTypedOuter<AFGPlayerController>();
-		if (!IsValid(Controller) || !Controller->HasAuthority() || Controller->GetWorld() != RCO->GetWorld())
+		const AFGPlayerController* Controller = RCO->GetOwnerPlayerController();
+		if (!IsValid(Controller) || !Controller->HasAuthority() || !IsValid(Controller->GetWorld()) ||
+			Controller->GetWorld() != RCO->GetWorld())
 		{
 			return false;
 		}
