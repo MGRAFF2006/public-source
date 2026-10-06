@@ -6,6 +6,7 @@
 
 #include "BFL/KBFL_Player.h"
 #include "BFL/KBFL_Util.h"
+#include "BlueprintFunctionLib/KPCLSwatchTextLib.h"
 #include "Net/UnrealNetwork.h"
 #include "Replication/KPCLDefaultRCO.h"
 
@@ -102,6 +103,60 @@ void AKPCLSwatchSystem::UpdateCustomSwatchData(FCustomSwatchData Data, int32 Idx
 }
 
 TArray<FCustomSwatchData> AKPCLSwatchSystem::GetCustomSwatchData() const { return mCustomSwatchData; }
+
+bool AKPCLSwatchSystem::ExportCustomSwatchText(const TArray<int32>& Indices, FString& OutText, FText& OutError) const
+{
+	OutError = FText::GetEmpty();
+	if (Indices.IsEmpty() || Indices.Num() > UKPCLSwatchTextLib::MaxSwatches)
+	{
+		OutError = NSLOCTEXT("KPCLSwatchText", "InvalidCount", "Choose between 1 and 256 swatches.");
+		return false;
+	}
+	TArray<FCustomSwatchData> Swatches;
+	for (int32 Index : Indices)
+	{
+		if (!mCustomSwatchData.IsValidIndex(Index))
+		{
+			OutError = NSLOCTEXT("KPCLSwatchText", "InvalidSelection", "One of the selected swatches no longer exists.");
+			return false;
+		}
+		Swatches.Add(mCustomSwatchData[Index]);
+	}
+	return UKPCLSwatchTextLib::ExportSwatches(Swatches, OutText, OutError);
+}
+
+bool AKPCLSwatchSystem::ImportCustomSwatchText(const FString& Text, FText& OutError)
+{
+	OutError = FText::GetEmpty();
+	if (!HasAuthority())
+	{
+		OutError = NSLOCTEXT("KPCLSwatchText", "AuthorityRequired", "Swatches must be imported on the host or server.");
+		return false;
+	}
+	TArray<FCustomSwatchData> Swatches;
+	if (!UKPCLSwatchTextLib::ParseSwatches(Text, Swatches, OutError))
+	{
+		return false;
+	}
+	if (mCustomSwatchData.Num() > UKPCLSwatchTextLib::MaxSwatches - Swatches.Num())
+	{
+		OutError = NSLOCTEXT("KPCLSwatchText", "CollectionFull", "Import would exceed the limit of 256 saved swatches.");
+		return false;
+	}
+	for (const FCustomSwatchData& Swatch : Swatches)
+	{
+		if (mCustomSwatchData.ContainsByPredicate([&Swatch](const FCustomSwatchData& Existing)
+												   { return Existing.mSlotName == Swatch.mSlotName; }))
+		{
+			OutError = NSLOCTEXT("KPCLSwatchText", "ExistingName", "A swatch with an imported name already exists. Rename or remove it first.");
+			return false;
+		}
+	}
+	mCustomSwatchData.Append(Swatches);
+	OnRep_CustomSwatchData();
+	ForceNetUpdate();
+	return true;
+}
 
 void AKPCLSwatchSystem::OnRep_CustomSwatchData()
 {

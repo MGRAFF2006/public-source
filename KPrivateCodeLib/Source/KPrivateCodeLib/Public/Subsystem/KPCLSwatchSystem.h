@@ -64,6 +64,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "SwatchSystem")
 	TArray<FCustomSwatchData> GetCustomSwatchData() const;
 
+	UFUNCTION(BlueprintCallable, Category = "SwatchSystem")
+	bool ExportCustomSwatchText(const TArray<int32>& Indices, FString& OutText, FText& OutError) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "SwatchSystem")
+	bool ImportCustomSwatchText(const FString& Text, FText& OutError);
+
 	UFUNCTION()
 	void OnRep_CustomSwatchData();
 
