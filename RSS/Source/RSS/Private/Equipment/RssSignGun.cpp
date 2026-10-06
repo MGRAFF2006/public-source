@@ -580,6 +580,14 @@ void ARssSignGun::PastePasteSign()
 			OnPaste();
 		}
 	}
+	else if (WeLookAtRssSign_Internal(mTargetActor) && IsValid(mRssDataManager))
+	{
+		IRssSignInterface::Execute_PasteSignData(mTargetActor, mRssDataManager->GetCopiedSignData());
+		mPastedActors.Add(mTargetActor);
+		StopLookAtActor(mTargetActor);
+		LookAtActor(mTargetActor);
+		OnPaste();
+	}
 }
 
 bool ARssSignGun::CanPastePasteSign(AActor* Actor) const
