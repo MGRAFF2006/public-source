@@ -154,6 +154,7 @@ void ARSSSignHologramPipeAndBelts::HandleBeltSnap(const FHitResult& hitResult)
 		SetActorLocation(FindSplineLocation(WorldLocation, Belt->GetSplineComponent()));
 
 		FRotator Rotator = FindSplineRotator(WorldLocation, Belt->GetSplineComponent());
+		Rotator.Roll += GetRotationFromSteps();
 		Rotator.Roll += mIsMir * 180;
 		Rotator.Pitch += mIsMir * 180;
 		SetActorRotation(Rotator);
