@@ -106,6 +106,8 @@ public:
 	virtual FText GetDismantleDisplayName_Implementation(AFGCharacterPlayer* byCharacter) const override;
 	virtual void GetDismantleDependencies_Implementation(TArray<AActor*>& out_dismantleDependencies) const override;
 
+	bool IsPlayerInteracting(const AFGCharacterPlayer* Player) const;
+
 	void GenerateLoot();
 	void UpdateActorState(bool IsEmpty);
 	void SetEmpty(bool NewIsEmpty);
@@ -152,6 +154,8 @@ public:
 	bool bIsEmpty = false;
 
 private:
+	TArray<TWeakObjectPtr<AFGCharacterPlayer>> mInteractingPlayers;
+
 	UFUNCTION()
 	bool FilterItemClasses(TSubclassOf<UObject> object, int32 idx) const;
 

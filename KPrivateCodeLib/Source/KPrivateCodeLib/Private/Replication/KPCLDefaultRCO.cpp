@@ -8,6 +8,9 @@
 #include "Buildable/KPCLPressureRegulatorValve.h"
 #include "Buildable/KPCLProducerBase.h"
 #include "FGCharacterPlayer.h"
+#include "FGGameSession.h"
+#include "FGPlayerController.h"
+#include "GameFramework/GameMode.h"
 #include "Looting/KPCLLootChest.h"
 #include "Net/UnrealNetwork.h"
 #include "Network/Buildings/KPCLNetworkConnectionBuilding.h"
@@ -16,9 +19,71 @@
 #include "Subsystem/KPCLDeliveryTaskSubsystem.h"
 #include "Subsystem/KPCLFaxitSubsystem.h"
 
+namespace
+{
+	AFGPlayerController* GetRequestingController(const UKPCLDefaultRCO* RCO)
+	{
+		AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetTypedOuter<AFGPlayerController>() : nullptr;
+		return IsValid(Controller) && Controller->HasAuthority() && IsValid(Controller->GetWorld()) &&
+			Controller->GetWorld() == RCO->GetWorld()
+			? Controller
+			: nullptr;
+	}
+
+	AFGCharacterPlayer* GetRequestingPlayer(const UKPCLDefaultRCO* RCO)
+	{
+		AFGPlayerController* Controller = GetRequestingController(RCO);
+		AFGCharacterPlayer* Player = IsValid(Controller) ? Cast<AFGCharacterPlayer>(Controller->GetControlledCharacter()) : nullptr;
+		return IsValid(Player) && Player->GetWorld() == RCO->GetWorld() ? Player : nullptr;
+	}
+
+	bool CanInteractWithBuilding(const UKPCLDefaultRCO* RCO, const AFGBuildable* Building)
+	{
+		AFGCharacterPlayer* Player = GetRequestingPlayer(RCO);
+		return IsValid(Player) && IsValid(Building) && Building->HasAuthority() &&
+			Building->GetWorld() == RCO->GetWorld() && Building->GetInteractingPlayers().Contains(Player);
+	}
+
+	bool CanAccessInventory(const UKPCLDefaultRCO* RCO, const UFGInventoryComponent* Inventory)
+	{
+		AFGCharacterPlayer* Player = GetRequestingPlayer(RCO);
+		if (!IsValid(Player) || !IsValid(Inventory) || Inventory->GetWorld() != RCO->GetWorld())
+		{
+			return false;
+		}
+		AActor* Owner = Inventory->GetOwner();
+		AKPCLLootChest* Chest = Cast<AKPCLLootChest>(Owner);
+		return Owner == Player || CanInteractWithBuilding(RCO, Cast<AFGBuildable>(Owner)) ||
+			(IsValid(Chest) && Chest->GetInventory() == Inventory && Chest->IsPlayerInteracting(Player));
+	}
+
+	bool CanUseDebug(const UKPCLDefaultRCO* RCO)
+	{
+		AFGPlayerController* Controller = GetRequestingController(RCO);
+		if (!IsValid(Controller))
+		{
+			return false;
+		}
+		AGameMode* GameMode = Controller->GetWorld()->GetAuthGameMode<AGameMode>();
+		AFGGameSession* Session = IsValid(GameMode) ? Cast<AFGGameSession>(GameMode->GameSession) : nullptr;
+		return Controller->IsLocalController() || (IsValid(Session) && Session->IsPlayerAdmin(Controller));
+	}
+
+	bool IsCanonicalOutlineTarget(const UKPCLDefaultRCO* RCO, const AKPCLOutlineSubsystem* Target)
+	{
+		return CanUseDebug(RCO) && IsValid(Target) && Target == AKPCLOutlineSubsystem::Get(RCO->GetWorld());
+	}
+
+	bool IsCanonicalSwatchTarget(const UKPCLDefaultRCO* RCO, const AKPCLSwatchSystem* Target)
+	{
+		return IsValid(GetRequestingPlayer(RCO)) && IsValid(Target) && Target == AKPCLSwatchSystem::Get(RCO->GetWorld());
+	}
+}
+
 void UKPCLDefaultRCO::Server_CreateOutlineForActor_Implementation(AKPCLOutlineSubsystem* Subsystem, FOutlineData Data)
 {
-	if (Subsystem && Data.mActorToOutline)
+	if (IsCanonicalOutlineTarget(this, Subsystem) && IsValid(Data.mActorToOutline) &&
+		Data.mActorToOutline->GetWorld() == GetWorld())
 	{
 		Subsystem->MultiCast_CreateOutlineForActor(Data);
 		Subsystem->ForceNetUpdate();
@@ -27,7 +92,7 @@ void UKPCLDefaultRCO::Server_CreateOutlineForActor_Implementation(AKPCLOutlineSu
 
 void UKPCLDefaultRCO::Server_ClearOutlines_Implementation(AKPCLOutlineSubsystem* Subsystem)
 {
-	if (Subsystem)
+	if (IsCanonicalOutlineTarget(this, Subsystem))
 	{
 		Subsystem->MultiCast_ClearOutlines();
 		Subsystem->ForceNetUpdate();
@@ -37,7 +102,7 @@ void UKPCLDefaultRCO::Server_ClearOutlines_Implementation(AKPCLOutlineSubsystem*
 void UKPCLDefaultRCO::Server_SetOutlineColor_Implementation(AKPCLOutlineSubsystem* Subsystem, FLinearColor Color,
 															EOutlineColorSlot ColorSlot)
 {
-	if (Subsystem)
+	if (IsCanonicalOutlineTarget(this, Subsystem))
 	{
 		Subsystem->MultiCast_SetOutlineColor(Color, ColorSlot);
 		Subsystem->ForceNetUpdate();
@@ -46,7 +111,7 @@ void UKPCLDefaultRCO::Server_SetOutlineColor_Implementation(AKPCLOutlineSubsyste
 
 void UKPCLDefaultRCO::Server_ClearOutlineForActor_Implementation(AKPCLOutlineSubsystem* Subsystem, AActor* Actor)
 {
-	if (Subsystem && Actor)
+	if (IsCanonicalOutlineTarget(this, Subsystem) && IsValid(Actor) && Actor->GetWorld() == GetWorld())
 	{
 		Subsystem->MultiCast_ClearOutlinesForActor(Actor);
 		Subsystem->ForceNetUpdate();
@@ -62,6 +127,10 @@ void UKPCLDefaultRCO::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 void UKPCLDefaultRCO::Server_FlushFluids_Implementation(AFGBuildable* Building)
 {
+	if (!CanInteractWithBuilding(this, Building))
+	{
+		return;
+	}
 	if (AKPCLProducerBase* Producer = Cast<AKPCLProducerBase>(Building))
 	{
 		Producer->FlushFluids();
@@ -78,9 +147,11 @@ void UKPCLDefaultRCO::Server_FlushFluids_Implementation(AFGBuildable* Building)
 
 void UKPCLDefaultRCO::Server_LootChest_Implementation(AKPCLLootChest* Target, AFGCharacterPlayer* Player)
 {
-	if (ensure(Target))
+	AFGCharacterPlayer* RequestingPlayer = GetRequestingPlayer(this);
+	if (IsValid(Target) && Target->GetWorld() == GetWorld() && IsValid(RequestingPlayer) && Player == RequestingPlayer &&
+		Target->HasAuthority() && Target->IsPlayerInteracting(RequestingPlayer))
 	{
-		Target->Loot(Player);
+		Target->Loot(RequestingPlayer);
 	}
 }
 
@@ -117,13 +188,16 @@ void UKPCLDefaultRCO::Server_MoveItemAmount_Implementation(UFGInventoryComponent
 														   UFGInventoryComponent* Target, FItemAmount Amount,
 														   bool ResizeToFit)
 {
-	MoveItemAmount(Source, SourceIndex, Target, Amount, ResizeToFit);
+	if (CanAccessInventory(this, Source) && CanAccessInventory(this, Target))
+	{
+		MoveItemAmount(Source, SourceIndex, Target, Amount, ResizeToFit);
+	}
 }
 
 void UKPCLDefaultRCO::Server_UpdateCustomSwatchData_Implementation(AKPCLSwatchSystem* Target, FCustomSwatchData Data,
 																   int32 Idx)
 {
-	if (ensureMsgf(Target, TEXT("Cant Found AKPCLSwatchSystem Server_AddCustomSwatchData")))
+	if (IsCanonicalSwatchTarget(this, Target))
 	{
 		Target->UpdateCustomSwatchData(Data, Idx);
 		Target->ForceNetUpdate();
@@ -132,7 +206,7 @@ void UKPCLDefaultRCO::Server_UpdateCustomSwatchData_Implementation(AKPCLSwatchSy
 
 void UKPCLDefaultRCO::Server_AddCustomSwatchData_Implementation(AKPCLSwatchSystem* Target, FCustomSwatchData Data)
 {
-	if (ensureMsgf(Target, TEXT("Cant Found AKPCLSwatchSystem Server_AddCustomSwatchData")))
+	if (IsCanonicalSwatchTarget(this, Target))
 	{
 		Target->AddCustomSwatchData(Data);
 		Target->ForceNetUpdate();
@@ -141,7 +215,7 @@ void UKPCLDefaultRCO::Server_AddCustomSwatchData_Implementation(AKPCLSwatchSyste
 
 void UKPCLDefaultRCO::Server_RemoveCustomSwatchData_Implementation(AKPCLSwatchSystem* Target, int32 Idx)
 {
-	if (ensureMsgf(Target, TEXT("Cant Found AKPCLSwatchSystem Server_RemoveCustomSwatchData")))
+	if (IsCanonicalSwatchTarget(this, Target))
 	{
 		Target->RemoveCustomSwatchData(Idx);
 		Target->ForceNetUpdate();
@@ -152,14 +226,8 @@ namespace
 {
 	bool IsCanonicalDeliveryTaskTarget(const UKPCLDefaultRCO* RCO, const AKPCLDeliveryTaskSubsystem* Target)
 	{
-		return IsValid(RCO) && IsValid(Target) && Target == AKPCLDeliveryTaskSubsystem::Get(RCO->GetWorld());
-	}
-
-	AFGCharacterPlayer* GetRequestingPlayer(const UKPCLDefaultRCO* RCO)
-	{
-		AFGPlayerController* Controller = IsValid(RCO) ? RCO->GetTypedOuter<AFGPlayerController>() : nullptr;
-		AFGCharacterPlayer* Player = IsValid(Controller) ? Cast<AFGCharacterPlayer>(Controller->GetPawn()) : nullptr;
-		return IsValid(Player) && Player->GetWorld() == RCO->GetWorld() ? Player : nullptr;
+		return IsValid(GetRequestingPlayer(RCO)) && IsValid(Target) &&
+			Target == AKPCLDeliveryTaskSubsystem::Get(RCO->GetWorld());
 	}
 
 	bool IsQueuedTaskAt(const UKPCLDefaultRCO* RCO, AKPCLDeliveryTaskSubsystem* Target, const UKAPIDeliveryTask* Task,
@@ -272,7 +340,7 @@ void UKPCLDefaultRCO::Server_DeliveryTask_TryToMoveQueueEntry_Implementation(AKP
 void UKPCLDefaultRCO::Server_Delivery_SetMinimumStoragePercentage_Implementation(AKPCLNetworkCore* Target,
 																				 float NewPercentage)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->SetMinimumStoragePercentage(NewPercentage);
 	}
@@ -281,9 +349,13 @@ void UKPCLDefaultRCO::Server_Delivery_SetMinimumStoragePercentage_Implementation
 void UKPCLDefaultRCO::Server_Faxit_GrabFromNetwork_Implementation(class AKPCLNetworkCore* Target,
 																  AFGCharacterPlayer* Player, FItemAmount Amount)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
-		Target->GrabFromNetwork(Player, Amount);
+		AFGCharacterPlayer* RequestingPlayer = GetRequestingPlayer(this);
+		if (Player == RequestingPlayer)
+		{
+			Target->GrabFromNetwork(RequestingPlayer, Amount);
+		}
 	}
 }
 
@@ -291,9 +363,13 @@ void UKPCLDefaultRCO::Server_Faxit_StorageFromPlayerToNetwork_Implementation(cla
 																			 AFGCharacterPlayer* Player,
 																			 FItemAmount Amount)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
-		Target->StorageFromPlayerToNetwork(Player, Amount);
+		AFGCharacterPlayer* RequestingPlayer = GetRequestingPlayer(this);
+		if (Player == RequestingPlayer)
+		{
+			Target->StorageFromPlayerToNetwork(RequestingPlayer, Amount);
+		}
 	}
 }
 
@@ -301,7 +377,8 @@ void UKPCLDefaultRCO::Server_Faxit_UpdateNetworkName_Implementation(class AKPCLF
 																	class AKPCLNetworkCore* Core,
 																	const FString& NewName)
 {
-	if (IsValid(Target))
+	if (IsValid(Target) && Target == AKPCLFaxitSubsystem::Get(GetWorld()) &&
+		CanInteractWithBuilding(this, Core))
 	{
 		Target->UpdateNetworkName(Core, NewName);
 	}
@@ -319,7 +396,7 @@ namespace
 		}
 
 		AFGCharacterPlayer* Player = GetRequestingPlayer(RCO);
-		if (!IsValid(Player) || !Building->GetInteractingPlayers().Contains(Player))
+		if (!IsValid(Player) || !CanInteractWithBuilding(RCO, Building) || !Core->HasAuthority())
 		{
 			return false;
 		}
@@ -359,7 +436,7 @@ void UKPCLDefaultRCO::Server_Faxit_AddBuildingToCore_Implementation(AKPCLNetwork
 void UKPCLDefaultRCO::Server_Faxit_SetSpeedOverride_Implementation(class AKPCLNetworkConnectionBuilding* Target,
 																   float Value)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->SetSpeedOverride(Value);
 	}
@@ -367,7 +444,7 @@ void UKPCLDefaultRCO::Server_Faxit_SetSpeedOverride_Implementation(class AKPCLNe
 
 void UKPCLDefaultRCO::Server_Faxit_ClearSpeedOverride_Implementation(class AKPCLNetworkConnectionBuilding* Target)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->ClearSpeedOverride();
 	}
@@ -376,7 +453,7 @@ void UKPCLDefaultRCO::Server_Faxit_ClearSpeedOverride_Implementation(class AKPCL
 void UKPCLDefaultRCO::Server_Faxit_SetFilterItem_Implementation(class AKPCLNetworkConnectionBuilding* Target,
 																TSubclassOf<UFGItemDescriptor> NewItem)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->SetFilterItem(NewItem);
 	}
@@ -385,7 +462,7 @@ void UKPCLDefaultRCO::Server_Faxit_SetFilterItem_Implementation(class AKPCLNetwo
 void UKPCLDefaultRCO::Server_Valve_SetOnThreshold_Implementation(AKPCLPressureRegulatorValve* Target,
 																 float NewThreshold)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->SetOnThreshold(NewThreshold);
 	}
@@ -394,7 +471,7 @@ void UKPCLDefaultRCO::Server_Valve_SetOnThreshold_Implementation(AKPCLPressureRe
 void UKPCLDefaultRCO::Server_Valve_SetOffThreshold_Implementation(AKPCLPressureRegulatorValve* Target,
 																  float NewThreshold)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->SetOffThreshold(NewThreshold);
 	}
@@ -403,7 +480,7 @@ void UKPCLDefaultRCO::Server_Valve_SetOffThreshold_Implementation(AKPCLPressureR
 void UKPCLDefaultRCO::Server_Valve_SetThresholds_Implementation(AKPCLPressureRegulatorValve* Target,
 																float NewOnThreshold, float NewOffThreshold)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->SetThresholds(NewOnThreshold, NewOffThreshold);
 	}
@@ -412,7 +489,7 @@ void UKPCLDefaultRCO::Server_Valve_SetThresholds_Implementation(AKPCLPressureReg
 void UKPCLDefaultRCO::Server_Splitter_SetFilteredItems_Implementation(
 	AKPCLBuildableBalanceSplitter* Target, int32 Idx, const TArray<TSubclassOf<UFGItemDescriptor>>& Items)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->SetFilteredItems(Idx, Items);
 	}
@@ -421,7 +498,7 @@ void UKPCLDefaultRCO::Server_Splitter_SetFilteredItems_Implementation(
 void UKPCLDefaultRCO::Server_Splitter_SetItemsPerMin_Implementation(AKPCLBuildableBalanceSplitter* Target, int32 Idx,
 																	float ItemsPerMin)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->SetItemsPerMin(Idx, ItemsPerMin);
 	}
@@ -430,7 +507,7 @@ void UKPCLDefaultRCO::Server_Splitter_SetItemsPerMin_Implementation(AKPCLBuildab
 void UKPCLDefaultRCO::Server_Splitter_RemoveFromFilter_Implementation(AKPCLBuildableBalanceSplitter* Target, int32 Idx,
 																	  TSubclassOf<UFGItemDescriptor> Item)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->RemoveFromFilter(Idx, Item);
 	}
@@ -439,7 +516,7 @@ void UKPCLDefaultRCO::Server_Splitter_RemoveFromFilter_Implementation(AKPCLBuild
 void UKPCLDefaultRCO::Server_Splitter_AddOrSetFilter_Implementation(AKPCLBuildableBalanceSplitter* Target, int32 Idx,
 																	TSubclassOf<UFGItemDescriptor> Item)
 {
-	if (IsValid(Target))
+	if (CanInteractWithBuilding(this, Target))
 	{
 		Target->AddOrSetFilter(Idx, Item);
 	}

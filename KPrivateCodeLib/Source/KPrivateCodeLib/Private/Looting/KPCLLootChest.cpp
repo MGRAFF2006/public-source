@@ -256,18 +256,30 @@ FText AKPCLLootChest::GetLookAtDecription_Implementation(class AFGCharacterPlaye
 
 void AKPCLLootChest::RegisterInteractingPlayer_Implementation(class AFGCharacterPlayer* player)
 {
-	fgcheck(player);
-	fgcheck(HasAuthority());
+	if (!HasAuthority() || !IsValid(player) || player->GetWorld() != GetWorld())
+	{
+		return;
+	}
+	mInteractingPlayers.AddUnique(player);
 	ForceNetUpdate();
 }
 
 void AKPCLLootChest::UnregisterInteractingPlayer_Implementation(class AFGCharacterPlayer* player)
 {
-	fgcheck(player);
-	fgcheck(HasAuthority());
+	if (!HasAuthority() || !IsValid(player) || player->GetWorld() != GetWorld())
+	{
+		return;
+	}
+	mInteractingPlayers.Remove(player);
 
 	SetNetDormancy(DORM_Awake);
 	ForceNetUpdate();
+}
+
+bool AKPCLLootChest::IsPlayerInteracting(const AFGCharacterPlayer* Player) const
+{
+	return HasAuthority() && IsValid(Player) && mInteractingPlayers.ContainsByPredicate(
+		[Player](const TWeakObjectPtr<AFGCharacterPlayer>& InteractingPlayer) { return InteractingPlayer.Get() == Player; });
 }
 
 void AKPCLLootChest::BeginPlay()
