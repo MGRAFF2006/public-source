@@ -18,7 +18,6 @@ bool UKBFLCppInventoryHelper::CanStoreItem(UFGInventoryComponent* Inventory, int
 
 		FInventoryStack lStack;
 		Inventory->GetStackFromIndex(InvIndex, lStack);
-		Inventory->SetLocked(false);
 		if (lStack.HasItems())
 		{
 			if (ItemClass != lStack.Item.GetItemClass())
