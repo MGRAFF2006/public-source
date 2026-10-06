@@ -153,7 +153,7 @@ void URssImageCacheManager::Shutdown()
 
 bool URssImageCacheManager::RequestImage(const FString& Url, bool bPersistent)
 {
-	if (Url.IsEmpty() || !URssDownloadImage::IsSafeRemoteImageUrl(Url))
+	if (Url.IsEmpty() || !URssDownloadImage::IsStructurallySafeRemoteImageUrl(Url))
 	{
 		return false;
 	}

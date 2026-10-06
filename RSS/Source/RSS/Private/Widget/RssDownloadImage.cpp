@@ -244,7 +244,7 @@ void URssDownloadImage::HandleImageRequest(FHttpRequestPtr HttpRequest, FHttpRes
 void URssDownloadImage::StartWithCache(FString URL, UObject* WorldContextObject)
 {
 #if !UE_SERVER
-	if (!IsSafeRemoteImageUrl(URL))
+	if (!IsStructurallySafeRemoteImageUrl(URL))
 	{
 		OnFail.Broadcast(nullptr);
 		Cleanup();

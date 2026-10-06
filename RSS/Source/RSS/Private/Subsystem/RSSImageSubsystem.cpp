@@ -333,7 +333,8 @@ void ARSSImageSubsystem::SendRequestBack(FRssSignRequestData& Request, UTexture*
 
 bool ARSSImageSubsystem::IsUrlValid(FString Url)
 {
-	return URssDownloadImage::IsSafeRemoteImageUrl(Url);
+	// Availability and resolved addresses are checked when starting a network download, not when using cached bytes.
+	return URssDownloadImage::IsStructurallySafeRemoteImageUrl(Url);
 }
 
 void ARSSImageSubsystem::GenerateInformation()

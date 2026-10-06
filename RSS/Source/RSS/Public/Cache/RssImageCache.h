@@ -151,6 +151,9 @@ protected:
 	void AddToMemoryCache(const FString& Url, UTexture2DDynamic* Texture, int64 SizeInBytes, bool bPersistent);
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+	friend class FRssOfflineCacheTest;
+#endif
 	UPROPERTY()
 	FRssImageCacheConfig CacheConfig;
 
