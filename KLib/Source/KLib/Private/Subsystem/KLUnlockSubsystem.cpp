@@ -82,12 +82,6 @@ UKAPIModularMinerDescription* AKLUnlockSubsystem::GetInformationAboutOre(const T
 	UKAPIModularMinerDescription* OutAsset = nullptr;
 	if (!bSkipUnlockCheck && !HasInformationAboutOre(Desc))
 	{
-		GetAssetSubsystem()->Miner_GetForKey(Desc, OutAsset);
-		return OutAsset;
-	}
-
-	if (!bSkipUnlockCheck)
-	{
 		return nullptr;
 	}
 	GetAssetSubsystem()->Miner_GetForKey(Desc, OutAsset);
