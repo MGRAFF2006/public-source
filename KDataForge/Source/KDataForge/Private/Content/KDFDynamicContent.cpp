@@ -54,7 +54,8 @@ bool FKDFDynamicContentRegistry::ValidateRuntimeIdentity(const FString& PackRef,
 	for (const FKDFGeneratedRecord& Record : mManifest)
 	{
 		if (Record.bIsAsset == bIsAsset && (Record.mPackRef != PackRef || Record.mId != Id) &&
-			SanitizeToken(Record.mPackRef) == SanitizedPack && SanitizeToken(Record.mId) == SanitizedId)
+			SanitizeToken(Record.mPackRef).Equals(SanitizedPack, ESearchCase::IgnoreCase) &&
+			SanitizeToken(Record.mId).Equals(SanitizedId, ESearchCase::IgnoreCase))
 		{
 			OutError = FString::Printf(
 				TEXT("Generated runtime identity collision: (%s, %s) and (%s, %s) both sanitize to %s/%s"),
