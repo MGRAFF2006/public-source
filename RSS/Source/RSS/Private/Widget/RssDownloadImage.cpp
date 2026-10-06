@@ -1,4 +1,4 @@
-﻿// Copyright Kyri123 / KMods 2026. All Rights Reserved.
+// Copyright Kyri123 / KMods 2026. All Rights Reserved.
 
 #include "Widget/RssDownloadImage.h"
 #include "Cache/RssImageCache.h"
