@@ -418,11 +418,11 @@ void AKLBuildableSlugHatching::onProducingFinal_Implementation()
 			if (IsValid(mSlugSubsystem) && !mSlugSubsystem->WasSlugBreeded(Amount.ItemClass))
 			{
 				AsyncTask(ENamedThreads::GameThread,
-						  [this, Amount]()
+						  [WeakSubsystem = TWeakObjectPtr<AKLSlugSubsystem>(mSlugSubsystem.Get()), Amount]()
 						  {
-							  if (IsValid(mSlugSubsystem))
+							  if (AKLSlugSubsystem* Subsystem = WeakSubsystem.Get())
 							  {
-								  mSlugSubsystem->AddBreededSlugs(Amount.ItemClass);
+								  Subsystem->AddBreededSlugs(Amount.ItemClass);
 							  }
 						  });
 			}
@@ -433,11 +433,11 @@ void AKLBuildableSlugHatching::onProducingFinal_Implementation()
 	if (IsValid(mSlugSubsystem) && !mSlugSubsystem->WasEggBreeded(EggClass))
 	{
 		AsyncTask(ENamedThreads::GameThread,
-				  [this, EggClass]()
+				  [WeakSubsystem = TWeakObjectPtr<AKLSlugSubsystem>(mSlugSubsystem.Get()), EggClass]()
 				  {
-					  if (IsValid(mSlugSubsystem))
+					  if (AKLSlugSubsystem* Subsystem = WeakSubsystem.Get())
 					  {
-						  mSlugSubsystem->AddBreededEgg(EggClass);
+						  Subsystem->AddBreededEgg(EggClass);
 					  }
 				  });
 	}
