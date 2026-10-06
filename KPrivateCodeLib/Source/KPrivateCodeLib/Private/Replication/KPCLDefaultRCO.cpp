@@ -92,6 +92,10 @@ int32 UKPCLDefaultRCO::MoveItemAmount(UFGInventoryComponent* Source, int32 Sourc
 		FInventoryStack Stack;
 		if (Source->GetStackFromIndex(SourceIndex, Stack))
 		{
+			if (!Stack.HasItems() || Stack.Item.GetItemClass() != Amount.ItemClass)
+			{
+				return 0;
+			}
 			if (Stack.NumItems >= Amount.Amount || ResizeToFit)
 			{
 				if (ResizeToFit && Stack.NumItems < Amount.Amount)
@@ -99,7 +103,9 @@ int32 UKPCLDefaultRCO::MoveItemAmount(UFGInventoryComponent* Source, int32 Sourc
 					Amount.Amount = Stack.NumItems;
 				}
 
-				int32 GrabedAmount = Target->AddStack(FInventoryStack(Amount.Amount, Amount.ItemClass));
+				FInventoryStack StackToMove = Stack;
+				StackToMove.NumItems = Amount.Amount;
+				int32 GrabedAmount = Target->AddStack(StackToMove);
 
 				if (GrabedAmount > 0)
 				{
