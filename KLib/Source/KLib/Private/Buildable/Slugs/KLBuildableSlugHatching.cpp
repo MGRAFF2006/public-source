@@ -522,6 +522,11 @@ bool AKLBuildableSlugHatching::CanProduce_Implementation() const
 		return false;
 	}
 
+	if (mEggsToConsume <= 0 || GetStackFromIndex(EGG_IDX).NumItems < mEggsToConsume)
+	{
+		return false;
+	}
+
 	if (!CanStoreSlugs() || !IsHatchingValid() || !CheckFeelingOfEgg() || !CheckModules())
 	{
 		return false;
