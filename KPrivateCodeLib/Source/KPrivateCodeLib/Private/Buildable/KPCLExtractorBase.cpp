@@ -1001,8 +1001,7 @@ void AKPCLExtractorBase::HandlePower(float dt)
 	GetPowerInfo()->SetMaximumTargetConsumption(mPowerOptions.mIsProducer
 													? FMath::Max(mPowerOptions.mForcePowerConsume, 0.1f)
 													: mPowerOptions.GetMaxPowerConsume());
-	GetPowerInfo()->SetBaseProduction(!mPowerOptions.mIsProducer ||
-											  (!mPowerOptions.mIsProducer && mPowerOptions.mIsDynamicProducer)
+	GetPowerInfo()->SetBaseProduction(!mPowerOptions.mIsProducer || mPowerOptions.mIsDynamicProducer
 										  ? 0.0f
 										  : mPowerOptions.GetMaxPowerConsume());
 	GetPowerInfo()->SetDynamicProductionCapacity(
