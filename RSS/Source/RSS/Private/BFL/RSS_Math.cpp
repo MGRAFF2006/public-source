@@ -9,7 +9,7 @@ TArray<FVector> URSS_Math::CalculateOrbitPoints(float Ellipse, float Radius, flo
 	TArray<FVector> LocalSplinePoints = {};
 	for (int i = 0; i < PointCount; i++)
 	{
-		float Degree = 360 / (PointCount + 1);
+		float Degree = 360.0f / PointCount;
 		float CurDegree = i * Degree;
 		float X = UKismetMathLibrary::DegSin(CurDegree) * (2 - Ellipse) * Radius;
 		float Y = UKismetMathLibrary::DegCos(CurDegree) * Radius * Ellipse;
