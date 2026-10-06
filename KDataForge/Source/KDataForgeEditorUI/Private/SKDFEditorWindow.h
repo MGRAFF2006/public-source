@@ -92,5 +92,6 @@ private:
 	bool bPropertyExpansionInitialized = false;
 	FString mExpansionObjectPath;
 
+	FString mProvenancePropertyPath;
 	int32 mSideTab = 0;
 };

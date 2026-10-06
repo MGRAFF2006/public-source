@@ -535,6 +535,7 @@ void UKDFSubsystem::ApplyStages()
 				const FKDFValueCodec::FPackScope PackScope(Document.mPackRef);
 				if (Handler->ApplyDocument(*Document.mRoot, ApplyContext))
 				{
+					StampPatchOperations(PatchRecord);
 					mPatchRecords.Add(MoveTemp(PatchRecord));
 				}
 			}
@@ -556,6 +557,14 @@ void UKDFSubsystem::ApplyStages()
 	}
 }
 
+void UKDFSubsystem::StampPatchOperations(FKDFPatchRecord& Record)
+{
+	for (FKDFOpRecord& Op : Record.mOps)
+	{
+		Op.mApplicationOrder = mNextApplicationOrder++;
+	}
+}
+
 void UKDFSubsystem::RecordDeferredPatchResult(FKDFPatchRecord Record, TArray<FKDFDiagnostic> Diagnostics)
 {
 	mDiagnostics.Append(MoveTemp(Diagnostics));
@@ -563,6 +572,7 @@ void UKDFSubsystem::RecordDeferredPatchResult(FKDFPatchRecord Record, TArray<FKD
 	{
 		return;
 	}
+	StampPatchOperations(Record);
 	for (FKDFPatchRecord& Existing : mPatchRecords)
 	{
 		if (Existing.mPackRef == Record.mPackRef && Existing.mSourceFile == Record.mSourceFile &&
@@ -848,6 +858,7 @@ bool UKDFSubsystem::ApplyEditorOp(UObject* Target, const FString& PropertyPath, 
 	OpRecord.mPropertyPath = Path.ToString();
 	OpRecord.mOp = Op;
 	OpRecord.mValueText = OutPostValue;
+	OpRecord.mApplicationOrder = mNextApplicationOrder++;
 
 	FKDFPatchUtil::PostWriteFixups(Target, Path.ToString());
 	if (FKDFPatchUtil::IsDebugEnabled(false))
@@ -1105,6 +1116,7 @@ void UKDFSubsystem::ApplyLazyWatchesToClass(UClass* NewClass, UObject* CDO)
 		{
 			UE_LOG(LogKDataForge, Log, TEXT("Lazy-loaded class '%s' matched a watch from %s — CDO patched"),
 				   *NewClass->GetName(), *Watch.mSourceFile);
+			StampPatchOperations(Record);
 			mPatchRecords.Add(MoveTemp(Record));
 		}
 	}

@@ -131,6 +131,8 @@ public:
 
 	FString GetSelectedReferencesText() const;
 
+	FString GetPropertyProvenance(const FString& PropertyPath) const;
+
 	const TArray<TSharedPtr<FString>>& GetCreatableKinds() const { return mCreatableKinds; }
 
 	const TArray<TSharedPtr<FString>>& GetRegisterAsOptions() const { return mRegisterAsOptions; }

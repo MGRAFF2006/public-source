@@ -277,7 +277,15 @@ TSharedRef<SWidget> SKDFEditorWindow::BuildInspectorPane()
 				.OnGenerateRow(this, &SKDFEditorWindow::GeneratePropertyRow)
 				.OnGetChildren(this, &SKDFEditorWindow::OnGetRowChildren)
 				.OnSetExpansionRecursive(this, &SKDFEditorWindow::SetRowExpansionRecursive)
-				.SelectionMode(ESelectionMode::None)
+				.SelectionMode(ESelectionMode::Single)
+				.OnSelectionChanged_Lambda([this](FKDFPropertyRowPtr Row, ESelectInfo::Type)
+				{
+					mProvenancePropertyPath = Row.IsValid() && !Row->bIsCategory ? Row->mPath : FString();
+					if (mSideTab == 3)
+					{
+						RefreshYamlPreview();
+					}
+				})
 			]
 		];
 
@@ -307,6 +315,10 @@ TSharedRef<SWidget> SKDFEditorWindow::BuildSidePane()
 				+ SHorizontalBox::Slot().AutoWidth()
 				[
 					MakeTabButton(TEXT("Refs"), 2)
+				]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(PadS, 0, 0, 0)
+				[
+					MakeTabButton(TEXT("History"), 3)
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.f) [ SNullWidget::NullWidget ]
 				+ SHorizontalBox::Slot().AutoWidth()
@@ -1131,6 +1143,7 @@ void SKDFEditorWindow::OnBrowserSelectionChanged(FKDFBrowserItemPtr Item, ESelec
 {
 	if (UKDFEditorModel* Model = mModel.Get())
 	{
+		mProvenancePropertyPath.Reset();
 		Model->Select(Item);
 		const FString SelectedPath =
 			Item.IsValid() && Item->mObject.IsValid() ? Item->mObject->GetPathName() : FString();
@@ -1456,6 +1469,9 @@ void SKDFEditorWindow::RefreshYamlPreview()
 		break;
 	case 2:
 		mYamlPreview->SetText(FText::FromString(Model->GetSelectedReferencesText()));
+		break;
+	case 3:
+		mYamlPreview->SetText(FText::FromString(Model->GetPropertyProvenance(mProvenancePropertyPath)));
 		break;
 	default:
 		mYamlPreview->SetText(FText::FromString(Model->GetSelectedYamlPreview(bPreviewDiffOnly)));

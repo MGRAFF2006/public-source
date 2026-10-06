@@ -97,6 +97,9 @@ struct KDATAFORGEAPI_API FKDFOpRecord
 
 	UPROPERTY()
 	FString mValueText;
+
+	UPROPERTY()
+	int64 mApplicationOrder = INDEX_NONE;
 };
 
 USTRUCT()

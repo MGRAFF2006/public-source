@@ -140,6 +140,7 @@ public:
 	const FKDFPatchRecord& GetEditorPatchRecord() const { return mEditorPatchRecord; }
 
 private:
+	void StampPatchOperations(FKDFPatchRecord& Record);
 	void ScanAndParse();
 	void ApplyStages();
 	void SortStageDocuments(TArray<int32>& DocumentIndices) const;
@@ -171,6 +172,7 @@ private:
 	TArray<FKDFDocument> mDocuments;
 	TArray<FKDFDiagnostic> mDiagnostics;
 	TArray<FKDFPatchRecord> mPatchRecords;
+	int64 mNextApplicationOrder = 0;
 	TArray<FKDFActorPatch> mActorPatches;
 	TArray<FKDFNodePurge> mNodePurges;
 	TArray<FKDFContentRemoval> mContentRemovals;

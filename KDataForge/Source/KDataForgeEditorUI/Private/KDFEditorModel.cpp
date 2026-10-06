@@ -1227,6 +1227,89 @@ FString UKDFEditorModel::GetSelectedReferencesText() const
 	return Result.IsEmpty() ? TEXT("no references found in registered content") : Result;
 }
 
+FString UKDFEditorModel::GetPropertyProvenance(const FString& PropertyPath) const
+{
+	UObject* Selected = mSelectedObject.Get();
+	const UKDFSubsystem* KDF = GetKDF();
+	if (Selected == nullptr || KDF == nullptr || PropertyPath.IsEmpty())
+	{
+		return TEXT("Select a property row to view its recorded operations.");
+	}
+	const auto CanonicalRoot = [Selected](const FString& Text)
+	{
+		FKDFPropertyPath Path;
+		FString Error;
+		if (FKDFPropertyPath::Parse(Text, Path, Error))
+		{
+			const FString& RootName = Path.mSegments[0].mName;
+			if (const FProperty* Property = FKDFPropertyResolver::FindPropertyByNameFlexible(Selected->GetClass(), RootName))
+			{
+				return Property->GetName() + Text.RightChop(RootName.Len());
+			}
+		}
+		return Text;
+	};
+	const auto IsUnder = [](const FString& Child, const FString& Parent)
+	{
+		return Child.StartsWith(Parent, ESearchCase::IgnoreCase) &&
+			(Child.Len() == Parent.Len() || Child[Parent.Len()] == TEXT('.') || Child[Parent.Len()] == TEXT('['));
+	};
+	struct FMatch
+	{
+		const FKDFPatchRecord* Patch;
+		const FKDFOpRecord* Op;
+	};
+	TArray<FMatch> Matches;
+	const FString SelectedPath = CanonicalRoot(PropertyPath);
+	FKDFPropertyPath SelectedPropertyPath;
+	FKDFResolvedProperty SelectedProperty;
+	FString ResolveError;
+	const bool bSelectedResolved = FKDFPropertyPath::Parse(PropertyPath, SelectedPropertyPath, ResolveError) &&
+		FKDFPropertyResolver::Resolve(Selected, SelectedPropertyPath, SelectedProperty, ResolveError);
+	const auto Collect = [&Matches, &SelectedPath, &IsUnder, &CanonicalRoot, &SelectedProperty, bSelectedResolved, Selected](const FKDFPatchRecord& Patch)
+	{
+		for (const FKDFOpRecord& Op : Patch.mOps)
+		{
+			if (Op.mTargetObjectPath != Selected->GetPathName() || Op.mApplicationOrder == INDEX_NONE)
+			{
+				continue;
+			}
+			const FString OpPath = CanonicalRoot(Op.mPropertyPath);
+			FKDFPropertyPath OperationPath;
+			FKDFResolvedProperty OperationProperty;
+			FString Error;
+			const bool bSameResolvedValue = bSelectedResolved &&
+				FKDFPropertyPath::Parse(Op.mPropertyPath, OperationPath, Error) &&
+				FKDFPropertyResolver::Resolve(Selected, OperationPath, OperationProperty, Error) &&
+				OperationProperty.mValuePtr == SelectedProperty.mValuePtr &&
+				OperationProperty.mProperty == SelectedProperty.mProperty;
+			if (bSameResolvedValue || IsUnder(OpPath, SelectedPath) || IsUnder(SelectedPath, OpPath))
+			{
+				Matches.Add({&Patch, &Op});
+			}
+		}
+	};
+	for (const FKDFPatchRecord& Patch : KDF->GetPatchRecords())
+	{
+		Collect(Patch);
+	}
+	Collect(KDF->GetEditorPatchRecord());
+	Matches.Sort([](const FMatch& A, const FMatch& B) { return A.Op->mApplicationOrder < B.Op->mApplicationOrder; });
+	FString Output = FString::Printf(TEXT("%s\nRecorded applied operations, earliest first. Parent and child writes are included.\nUndo and mutations outside KDataForge may be unrecorded.\n"), *PropertyPath);
+	for (const FMatch& Match : Matches)
+	{
+		Output += FString::Printf(TEXT("\n#%lld  %s / %s\n  %s %s\n"), Match.Op->mApplicationOrder + 1,
+			Match.Patch->mPackRef.IsEmpty() ? TEXT("<live editor>") : *Match.Patch->mPackRef,
+			Match.Patch->mSourceFile.IsEmpty() ? TEXT("<session>") : *Match.Patch->mSourceFile,
+			*FKDFOpEngine::OpToString(Match.Op->mOp), *Match.Op->mPropertyPath);
+	}
+	if (Matches.IsEmpty())
+	{
+		Output += TEXT("\nNo recorded operations affect this property.");
+	}
+	return Output;
+}
+
 bool UKDFEditorModel::ExportSelected(bool bDiffOnly, FString& OutMessage)
 {
 	UObject* Selected = mSelectedObject.Get();

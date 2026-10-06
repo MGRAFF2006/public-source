@@ -98,6 +98,8 @@ Full grammar, examples for every document type, and task-oriented tutorials live
 | `KDF.Debug 1`                    | console (or `-KDFDebug`)            | Global debug logging: one `[KDF DEBUG]` line per applied op, including editor edits                     |
 | `KDF.ApplyToAssets [PathFilter]` | console (**UE editor builds only**) | Applies loaded YAML directly onto editor assets and marks packages dirty                                |
 
+Select a property row and open **History** to see its recorded KDataForge operations in application order, with the responsible pack and file. History includes parent/child writes; undo and changes made outside KDataForge may be unrecorded.
+
 {{GALLERY}}
 
 ---
