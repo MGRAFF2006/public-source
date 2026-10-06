@@ -83,25 +83,53 @@ void URssApiClient::SetBearerToken(const FString& NewToken)
 
 void URssApiClient::FetchOwnDesigns(UObject* WorldContextObject, int32 Limit, int32 Offset)
 {
-	FString QueryParams = FString::Printf(TEXT("?limit=%d&offset=%d"), Limit, Offset);
-	MakeAuthenticatedRequest(TEXT("/designs"), QueryParams);
+	StartRequest(CreateOwnDesignsRequest(Limit, Offset));
+}
+
+FHttpRequestPtr URssApiClient::CreateOwnDesignsRequest(int32 Limit, int32 Offset)
+{
+	return MakeAuthenticatedRequest(TEXT("/designs"), FString::Printf(TEXT("?limit=%d&offset=%d"), Limit, Offset));
 }
 
 void URssApiClient::FetchDesignById(UObject* WorldContextObject, const FString& DesignId)
 {
-	FString Endpoint = FString::Printf(TEXT("/designs/%s"), *DesignId);
-	MakeAuthenticatedRequest(Endpoint);
+	StartRequest(CreateDesignByIdRequest(DesignId));
+}
+
+FHttpRequestPtr URssApiClient::CreateDesignByIdRequest(const FString& DesignId)
+{
+	return MakeAuthenticatedRequest(FString::Printf(TEXT("/designs/%s"), *DesignId));
 }
 
 void URssApiClient::FetchPublicDesigns(UObject* WorldContextObject, int32 Limit, int32 Offset)
 {
-	FString QueryParams = FString::Printf(TEXT("?limit=%d&offset=%d"), Limit, Offset);
-	MakeAuthenticatedRequest(TEXT("/designs/public"), QueryParams);
+	StartRequest(CreatePublicDesignsRequest(Limit, Offset));
 }
 
-void URssApiClient::FetchDesignLimits(UObject* WorldContextObject) { MakeAuthenticatedRequest(TEXT("/limits")); }
+FHttpRequestPtr URssApiClient::CreatePublicDesignsRequest(int32 Limit, int32 Offset)
+{
+	return MakeAuthenticatedRequest(TEXT("/designs/public"), FString::Printf(TEXT("?limit=%d&offset=%d"), Limit, Offset));
+}
 
-void URssApiClient::MakeAuthenticatedRequest(const FString& Endpoint, const FString& QueryParams)
+void URssApiClient::FetchDesignLimits(UObject* WorldContextObject)
+{
+	StartRequest(CreateDesignLimitsRequest());
+}
+
+FHttpRequestPtr URssApiClient::CreateDesignLimitsRequest()
+{
+	return MakeAuthenticatedRequest(TEXT("/limits"));
+}
+
+void URssApiClient::StartRequest(FHttpRequestPtr Request)
+{
+	if (Request.IsValid() && !Request->ProcessRequest())
+	{
+		Request->OnProcessRequestComplete().ExecuteIfBound(Request, nullptr, false);
+	}
+}
+
+FHttpRequestPtr URssApiClient::MakeAuthenticatedRequest(const FString& Endpoint, const FString& QueryParams)
 {
 	FHttpModule& HttpModule = FHttpModule::Get();
 	FHttpRequestPtr Request = HttpModule.CreateRequest();
@@ -139,7 +167,7 @@ void URssApiClient::MakeAuthenticatedRequest(const FString& Endpoint, const FStr
 	}
 
 	PendingRequests.Add(Request, Endpoint);
-	Request->ProcessRequest();
+	return Request;
 }
 
 void URssApiClient::OnFetchOwnDesignsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse,
@@ -179,16 +207,13 @@ void URssApiClient::OnFetchOwnDesignsResponse(FHttpRequestPtr HttpRequest, FHttp
 			}
 		}
 
-		OnSignDesignListFetched.Broadcast(true, Designs);
-		PendingRequests.Remove(HttpRequest);
+		CompleteListRequest(HttpRequest, true, Designs, 0, FString());
 		return;
 	}
 
 	int32 ErrorCode = HttpResponse.IsValid() ? HttpResponse->GetResponseCode() : 0;
 	FString ErrorMsg = bSucceeded ? TEXT("Unknown error") : TEXT("Request failed");
-	OnApiError.Broadcast(ErrorCode, ErrorMsg);
-	OnSignDesignListFetched.Broadcast(false, Designs);
-	PendingRequests.Remove(HttpRequest);
+	CompleteListRequest(HttpRequest, false, Designs, ErrorCode, ErrorMsg);
 }
 
 void URssApiClient::OnFetchDesignByIdResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse,
@@ -214,8 +239,7 @@ void URssApiClient::OnFetchDesignByIdResponse(FHttpRequestPtr HttpRequest, FHttp
 				{
 					if (DeserializeSignDataObject(*SignDataObj, SignData))
 					{
-						OnSignDesignFetched.Broadcast(true, SignData);
-						PendingRequests.Remove(HttpRequest);
+						CompleteDesignRequest(HttpRequest, true, SignData, 0, FString());
 						return;
 					}
 				}
@@ -225,9 +249,7 @@ void URssApiClient::OnFetchDesignByIdResponse(FHttpRequestPtr HttpRequest, FHttp
 
 	int32 ErrorCode = HttpResponse.IsValid() ? HttpResponse->GetResponseCode() : 0;
 	FString ErrorMsg = bSucceeded ? TEXT("Failed to parse response") : TEXT("Request failed");
-	OnApiError.Broadcast(ErrorCode, ErrorMsg);
-	OnSignDesignFetched.Broadcast(false, SignData);
-	PendingRequests.Remove(HttpRequest);
+	CompleteDesignRequest(HttpRequest, false, SignData, ErrorCode, ErrorMsg);
 }
 
 void URssApiClient::OnFetchPublicDesignsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse,
@@ -267,16 +289,13 @@ void URssApiClient::OnFetchPublicDesignsResponse(FHttpRequestPtr HttpRequest, FH
 			}
 		}
 
-		OnSignDesignListFetched.Broadcast(true, Designs);
-		PendingRequests.Remove(HttpRequest);
+		CompleteListRequest(HttpRequest, true, Designs, 0, FString());
 		return;
 	}
 
 	int32 ErrorCode = HttpResponse.IsValid() ? HttpResponse->GetResponseCode() : 0;
 	FString ErrorMsg = bSucceeded ? TEXT("Unknown error") : TEXT("Request failed");
-	OnApiError.Broadcast(ErrorCode, ErrorMsg);
-	OnSignDesignListFetched.Broadcast(false, Designs);
-	PendingRequests.Remove(HttpRequest);
+	CompleteListRequest(HttpRequest, false, Designs, ErrorCode, ErrorMsg);
 }
 
 void URssApiClient::OnFetchDesignLimitsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse,
@@ -294,8 +313,7 @@ void URssApiClient::OnFetchDesignLimitsResponse(FHttpRequestPtr HttpRequest, FHt
 			if (RootObject->HasField(TEXT("data")))
 			{
 
-				OnApiError.Broadcast(200, TEXT("Limits fetched"));
-				PendingRequests.Remove(HttpRequest);
+				CompleteLimitsRequest(HttpRequest, true, 200, TEXT("Limits fetched"));
 				return;
 			}
 		}
@@ -303,8 +321,48 @@ void URssApiClient::OnFetchDesignLimitsResponse(FHttpRequestPtr HttpRequest, FHt
 
 	int32 ErrorCode = HttpResponse.IsValid() ? HttpResponse->GetResponseCode() : 0;
 	FString ErrorMsg = bSucceeded ? TEXT("Failed to parse response") : TEXT("Request failed");
-	OnApiError.Broadcast(ErrorCode, ErrorMsg);
-	PendingRequests.Remove(HttpRequest);
+	CompleteLimitsRequest(HttpRequest, false, ErrorCode, ErrorMsg);
+}
+
+void URssApiClient::CompleteListRequest(FHttpRequestPtr Request, bool bSuccess,
+	const TArray<FRssSignData>& Designs, int32 ErrorCode, const FString& ErrorMessage)
+{
+	if (!PendingRequests.Remove(Request))
+	{
+		return;
+	}
+	OnListRequestComplete.Broadcast(Request, bSuccess, Designs, ErrorCode, ErrorMessage);
+	if (!bSuccess)
+	{
+		OnApiError.Broadcast(ErrorCode, ErrorMessage);
+	}
+	OnSignDesignListFetched.Broadcast(bSuccess, Designs);
+}
+
+void URssApiClient::CompleteDesignRequest(FHttpRequestPtr Request, bool bSuccess, const FRssSignData& Design,
+	int32 ErrorCode, const FString& ErrorMessage)
+{
+	if (!PendingRequests.Remove(Request))
+	{
+		return;
+	}
+	OnDesignRequestComplete.Broadcast(Request, bSuccess, Design, ErrorCode, ErrorMessage);
+	if (!bSuccess)
+	{
+		OnApiError.Broadcast(ErrorCode, ErrorMessage);
+	}
+	OnSignDesignFetched.Broadcast(bSuccess, Design);
+}
+
+void URssApiClient::CompleteLimitsRequest(FHttpRequestPtr Request, bool bSuccess, int32 ErrorCode,
+	const FString& ErrorMessage)
+{
+	if (!PendingRequests.Remove(Request))
+	{
+		return;
+	}
+	OnLimitsRequestComplete.Broadcast(Request, bSuccess, ErrorCode, ErrorMessage);
+	OnApiError.Broadcast(ErrorCode, ErrorMessage);
 }
 
 URssApiFetchOwnDesignsAction* URssApiFetchOwnDesignsAction::FetchOwnDesigns(UObject* WorldContextObject, int32 Limit,
@@ -333,10 +391,9 @@ void URssApiFetchOwnDesignsAction::Activate()
 		return;
 	}
 
-	ApiClient->OnSignDesignListFetched.AddDynamic(this, &URssApiFetchOwnDesignsAction::OnListFetched);
-	ApiClient->OnApiError.AddDynamic(this, &URssApiFetchOwnDesignsAction::OnError);
-
-	ApiClient->FetchOwnDesigns(ApiClient, LimitParam, OffsetParam);
+	Request = ApiClient->CreateOwnDesignsRequest(LimitParam, OffsetParam);
+	ApiClient->OnListRequestComplete.AddUObject(this, &URssApiFetchOwnDesignsAction::OnRequestComplete);
+	ApiClient->StartRequest(Request);
 }
 
 void URssApiFetchOwnDesignsAction::OnListFetched(bool bSuccess, const TArray<FRssSignData>& Designs)
@@ -373,10 +430,30 @@ void URssApiFetchOwnDesignsAction::SetReadyToDestroy()
 	bCompleted = true;
 	if (IsValid(ApiClient))
 	{
+		ApiClient->OnListRequestComplete.RemoveAll(this);
 		ApiClient->OnSignDesignListFetched.RemoveDynamic(this, &URssApiFetchOwnDesignsAction::OnListFetched);
 		ApiClient->OnApiError.RemoveDynamic(this, &URssApiFetchOwnDesignsAction::OnError);
 	}
+	Request.Reset();
 	Super::SetReadyToDestroy();
+}
+
+void URssApiFetchOwnDesignsAction::OnRequestComplete(FHttpRequestPtr CompletedRequest, bool bSuccess,
+	const TArray<FRssSignData>& Designs,
+	int32 ErrorCode, const FString& ErrorMessage)
+{
+	if (CompletedRequest != Request || bCompleted)
+	{
+		return;
+	}
+	if (bSuccess)
+	{
+		OnListFetched(true, Designs);
+	}
+	else
+	{
+		OnError(ErrorCode, ErrorMessage);
+	}
 }
 
 URssApiFetchDesignByIdAction* URssApiFetchDesignByIdAction::FetchDesignById(UObject* WorldContextObject,
@@ -404,10 +481,9 @@ void URssApiFetchDesignByIdAction::Activate()
 		return;
 	}
 
-	ApiClient->OnSignDesignFetched.AddDynamic(this, &URssApiFetchDesignByIdAction::OnDesignFetched);
-	ApiClient->OnApiError.AddDynamic(this, &URssApiFetchDesignByIdAction::OnError);
-
-	ApiClient->FetchDesignById(ApiClient, DesignId);
+	Request = ApiClient->CreateDesignByIdRequest(DesignId);
+	ApiClient->OnDesignRequestComplete.AddUObject(this, &URssApiFetchDesignByIdAction::OnRequestComplete);
+	ApiClient->StartRequest(Request);
 }
 
 void URssApiFetchDesignByIdAction::OnDesignFetched(bool bSuccess, const FRssSignData& SignData)
@@ -444,10 +520,30 @@ void URssApiFetchDesignByIdAction::SetReadyToDestroy()
 	bCompleted = true;
 	if (IsValid(ApiClient))
 	{
+		ApiClient->OnDesignRequestComplete.RemoveAll(this);
 		ApiClient->OnSignDesignFetched.RemoveDynamic(this, &URssApiFetchDesignByIdAction::OnDesignFetched);
 		ApiClient->OnApiError.RemoveDynamic(this, &URssApiFetchDesignByIdAction::OnError);
 	}
+	Request.Reset();
 	Super::SetReadyToDestroy();
+}
+
+void URssApiFetchDesignByIdAction::OnRequestComplete(FHttpRequestPtr CompletedRequest, bool bSuccess,
+	const FRssSignData& Design,
+	int32 ErrorCode, const FString& ErrorMessage)
+{
+	if (CompletedRequest != Request || bCompleted)
+	{
+		return;
+	}
+	if (bSuccess)
+	{
+		OnDesignFetched(true, Design);
+	}
+	else
+	{
+		OnError(ErrorCode, ErrorMessage);
+	}
 }
 
 URssApiFetchPublicDesignsAction* URssApiFetchPublicDesignsAction::FetchPublicDesigns(UObject* WorldContextObject,
@@ -476,10 +572,9 @@ void URssApiFetchPublicDesignsAction::Activate()
 		return;
 	}
 
-	ApiClient->OnSignDesignListFetched.AddDynamic(this, &URssApiFetchPublicDesignsAction::OnListFetched);
-	ApiClient->OnApiError.AddDynamic(this, &URssApiFetchPublicDesignsAction::OnError);
-
-	ApiClient->FetchPublicDesigns(ApiClient, LimitParam, OffsetParam);
+	Request = ApiClient->CreatePublicDesignsRequest(LimitParam, OffsetParam);
+	ApiClient->OnListRequestComplete.AddUObject(this, &URssApiFetchPublicDesignsAction::OnRequestComplete);
+	ApiClient->StartRequest(Request);
 }
 
 void URssApiFetchPublicDesignsAction::OnListFetched(bool bSuccess, const TArray<FRssSignData>& Designs)
@@ -516,10 +611,30 @@ void URssApiFetchPublicDesignsAction::SetReadyToDestroy()
 	bCompleted = true;
 	if (IsValid(ApiClient))
 	{
+		ApiClient->OnListRequestComplete.RemoveAll(this);
 		ApiClient->OnSignDesignListFetched.RemoveDynamic(this, &URssApiFetchPublicDesignsAction::OnListFetched);
 		ApiClient->OnApiError.RemoveDynamic(this, &URssApiFetchPublicDesignsAction::OnError);
 	}
+	Request.Reset();
 	Super::SetReadyToDestroy();
+}
+
+void URssApiFetchPublicDesignsAction::OnRequestComplete(FHttpRequestPtr CompletedRequest, bool bSuccess,
+	const TArray<FRssSignData>& Designs,
+	int32 ErrorCode, const FString& ErrorMessage)
+{
+	if (CompletedRequest != Request || bCompleted)
+	{
+		return;
+	}
+	if (bSuccess)
+	{
+		OnListFetched(true, Designs);
+	}
+	else
+	{
+		OnError(ErrorCode, ErrorMessage);
+	}
 }
 
 URssApiFetchDesignLimitsAction* URssApiFetchDesignLimitsAction::FetchDesignLimits(UObject* WorldContextObject)
@@ -545,8 +660,9 @@ void URssApiFetchDesignLimitsAction::Activate()
 		return;
 	}
 
-	ApiClient->OnApiError.AddDynamic(this, &URssApiFetchDesignLimitsAction::OnError);
-	ApiClient->FetchDesignLimits(ApiClient);
+	Request = ApiClient->CreateDesignLimitsRequest();
+	ApiClient->OnLimitsRequestComplete.AddUObject(this, &URssApiFetchDesignLimitsAction::OnRequestComplete);
+	ApiClient->StartRequest(Request);
 }
 
 void URssApiFetchDesignLimitsAction::OnError(int32 ErrorCode, const FString& ErrorMessage)
@@ -572,7 +688,28 @@ void URssApiFetchDesignLimitsAction::SetReadyToDestroy()
 	bCompleted = true;
 	if (IsValid(ApiClient))
 	{
+		ApiClient->OnLimitsRequestComplete.RemoveAll(this);
 		ApiClient->OnApiError.RemoveDynamic(this, &URssApiFetchDesignLimitsAction::OnError);
 	}
+	Request.Reset();
 	Super::SetReadyToDestroy();
+}
+
+void URssApiFetchDesignLimitsAction::OnRequestComplete(FHttpRequestPtr CompletedRequest, bool bSuccess,
+	int32 ErrorCode, const FString& ErrorMessage)
+{
+	if (CompletedRequest != Request || bCompleted)
+	{
+		return;
+	}
+	bCompleted = true;
+	if (bSuccess)
+	{
+		OnSuccess.Broadcast(200, TEXT("Limits fetched successfully"));
+	}
+	else
+	{
+		OnFailed.Broadcast(ErrorCode, ErrorMessage);
+	}
+	SetReadyToDestroy();
 }

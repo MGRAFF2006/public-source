@@ -17,6 +17,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSignDesignListFetched, bool, bSu
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnApiError, int32, ErrorCode, const FString&, ErrorMessage);
 
+DECLARE_MULTICAST_DELEGATE_FiveParams(FRssDesignListRequestComplete, FHttpRequestPtr, bool,
+	const TArray<FRssSignData>&, int32, const FString&);
+DECLARE_MULTICAST_DELEGATE_FiveParams(FRssDesignRequestComplete, FHttpRequestPtr, bool,
+	const FRssSignData&, int32, const FString&);
+DECLARE_MULTICAST_DELEGATE_FourParams(FRssLimitsRequestComplete, FHttpRequestPtr, bool, int32, const FString&);
+
 UCLASS()
 class RSS_API URssApiClient : public UObject
 {
@@ -55,13 +61,32 @@ public:
 	FOnApiError OnApiError;
 
 private:
+	friend class URssApiFetchOwnDesignsAction;
+	friend class URssApiFetchDesignByIdAction;
+	friend class URssApiFetchPublicDesignsAction;
+	friend class URssApiFetchDesignLimitsAction;
+	friend class FRssApiRequestCorrelationTest;
+	FHttpRequestPtr CreateOwnDesignsRequest(int32 Limit, int32 Offset);
+	FHttpRequestPtr CreateDesignByIdRequest(const FString& DesignId);
+	FHttpRequestPtr CreatePublicDesignsRequest(int32 Limit, int32 Offset);
+	FHttpRequestPtr CreateDesignLimitsRequest();
+	void StartRequest(FHttpRequestPtr Request);
+	void CompleteListRequest(FHttpRequestPtr Request, bool bSuccess, const TArray<FRssSignData>& Designs,
+		int32 ErrorCode, const FString& ErrorMessage);
+	void CompleteDesignRequest(FHttpRequestPtr Request, bool bSuccess, const FRssSignData& Design,
+		int32 ErrorCode, const FString& ErrorMessage);
+	void CompleteLimitsRequest(FHttpRequestPtr Request, bool bSuccess, int32 ErrorCode, const FString& ErrorMessage);
+	FRssDesignListRequestComplete OnListRequestComplete;
+	FRssDesignRequestComplete OnDesignRequestComplete;
+	FRssLimitsRequestComplete OnLimitsRequestComplete;
+
 
 	void OnFetchOwnDesignsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 	void OnFetchDesignByIdResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 	void OnFetchPublicDesignsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 	void OnFetchDesignLimitsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 
-	void MakeAuthenticatedRequest(const FString& Endpoint, const FString& QueryParams = FString());
+	FHttpRequestPtr MakeAuthenticatedRequest(const FString& Endpoint, const FString& QueryParams = FString());
 
 	UPROPERTY()
 	FString BaseUrl = TEXT("https://k-mods.com/api/v2/rss");
@@ -97,6 +122,8 @@ public:
 
 private:
 	friend class FRssApiActionLifecycleTest;
+	friend class FRssApiRequestCorrelationTest;
+	FHttpRequestPtr Request;
 	bool bActivated = false;
 	bool bCompleted = false;
 
@@ -105,6 +132,9 @@ private:
 
 	int32 LimitParam;
 	int32 OffsetParam;
+
+	void OnRequestComplete(FHttpRequestPtr CompletedRequest, bool bSuccess, const TArray<FRssSignData>& Designs,
+		int32 ErrorCode, const FString& ErrorMessage);
 
 	UFUNCTION()
 	void OnListFetched(bool bSuccess, const TArray<FRssSignData>& Designs);
@@ -135,6 +165,8 @@ public:
 
 private:
 	friend class FRssApiActionLifecycleTest;
+	friend class FRssApiRequestCorrelationTest;
+	FHttpRequestPtr Request;
 	bool bActivated = false;
 	bool bCompleted = false;
 
@@ -142,6 +174,9 @@ private:
 	URssApiClient* ApiClient;
 
 	FString DesignId;
+
+	void OnRequestComplete(FHttpRequestPtr CompletedRequest, bool bSuccess, const FRssSignData& Design,
+		int32 ErrorCode, const FString& ErrorMessage);
 
 	UFUNCTION()
 	void OnDesignFetched(bool bSuccess, const FRssSignData& SignData);
@@ -173,6 +208,8 @@ public:
 
 private:
 	friend class FRssApiActionLifecycleTest;
+	friend class FRssApiRequestCorrelationTest;
+	FHttpRequestPtr Request;
 	bool bActivated = false;
 	bool bCompleted = false;
 
@@ -181,6 +218,9 @@ private:
 
 	int32 LimitParam;
 	int32 OffsetParam;
+
+	void OnRequestComplete(FHttpRequestPtr CompletedRequest, bool bSuccess, const TArray<FRssSignData>& Designs,
+		int32 ErrorCode, const FString& ErrorMessage);
 
 	UFUNCTION()
 	void OnListFetched(bool bSuccess, const TArray<FRssSignData>& Designs);
@@ -211,11 +251,16 @@ public:
 
 private:
 	friend class FRssApiActionLifecycleTest;
+	friend class FRssApiRequestCorrelationTest;
+	FHttpRequestPtr Request;
 	bool bActivated = false;
 	bool bCompleted = false;
 
 	UPROPERTY()
 	URssApiClient* ApiClient;
+
+	void OnRequestComplete(FHttpRequestPtr CompletedRequest, bool bSuccess, int32 ErrorCode,
+		const FString& ErrorMessage);
 
 	UFUNCTION()
 	void OnError(int32 ErrorCode, const FString& ErrorMessage);
