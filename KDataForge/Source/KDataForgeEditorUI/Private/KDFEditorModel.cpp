@@ -7,6 +7,7 @@
 #include "Engine/Blueprint.h"
 #include "Engine/DataAsset.h"
 #include "Engine/World.h"
+#include "HAL/FileManager.h"
 #include "Internationalization/Text.h"
 #include "KDFNode.h"
 #include "KDFYamlParser.h"
@@ -1244,6 +1245,11 @@ bool UKDFEditorModel::ExportSelected(bool bDiffOnly, FString& OutMessage)
 	const FString Directory =
 		FPaths::ConvertRelativePathToFull(FPaths::ProjectDir()) / TEXT("DataForge") / TEXT("exported");
 	const FString FilePath = Directory / (Selected->GetName() + TEXT(".cdo.yml"));
+	if (!IFileManager::Get().MakeDirectory(*Directory, true))
+	{
+		OutMessage = FString::Printf(TEXT("Could not create directory %s"), *Directory);
+		return false;
+	}
 	if (!FFileHelper::SaveStringToFile(Yaml, *FilePath))
 	{
 		OutMessage = FString::Printf(TEXT("Could not write %s"), *FilePath);
@@ -1312,6 +1318,11 @@ bool UKDFEditorModel::CreateContentDraft(const FString& Kind, const FString& Id,
 	const FString Directory =
 		FPaths::ConvertRelativePathToFull(FPaths::ProjectDir()) / TEXT("DataForge") / TEXT("created");
 	const FString FilePath = Directory / FString::Printf(TEXT("%s.%s.yml"), *Id, *Kind);
+	if (!IFileManager::Get().MakeDirectory(*Directory, true))
+	{
+		OutMessage = FString::Printf(TEXT("Could not create directory %s"), *Directory);
+		return false;
+	}
 	if (!FFileHelper::SaveStringToFile(FKDFYamlParser::EmitString(Document.Get()), *FilePath))
 	{
 		OutMessage = FString::Printf(TEXT("Could not write %s"), *FilePath);
