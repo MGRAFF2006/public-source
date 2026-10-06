@@ -27,6 +27,11 @@ FPrimaryAssetId UKBFLActorSpawnDescriptorBase::GetPrimaryAssetId() const
 
 void UKBFLActorSpawnDescriptorBase::BeginSpawning()
 {
+	if (mDisabled)
+	{
+		return;
+	}
+
 	UE_LOGFMT(KBFLActorSpawnerLog, Log, "BeginSpawning called for descriptor: {0}", GetName());
 
 	if (!AreRequirementsMet())
