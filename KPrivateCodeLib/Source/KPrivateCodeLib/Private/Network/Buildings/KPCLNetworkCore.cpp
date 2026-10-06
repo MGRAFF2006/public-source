@@ -591,7 +591,7 @@ void AKPCLNetworkCore::GrabFromNetwork(AFGCharacterPlayer* Player, FItemAmount A
 		return;
 	}
 
-	if (IsValid(Player) && IsValid(Player->GetInventory()) && IsValid(Amount.ItemClass))
+	if (IsValid(Player) && IsValid(Player->GetInventory()) && IsValid(Amount.ItemClass) && Amount.Amount > 0)
 	{
 		Amount.Amount = FMath::Min(Amount.Amount, UFGItemDescriptor::GetStackSize(Amount.ItemClass));
 
@@ -629,7 +629,7 @@ void AKPCLNetworkCore::StorageFromPlayerToNetwork(AFGCharacterPlayer* Player, FI
 		return;
 	}
 
-	if (IsValid(Player) && IsValid(Player->GetInventory()) && IsValid(Amount.ItemClass))
+	if (IsValid(Player) && IsValid(Player->GetInventory()) && IsValid(Amount.ItemClass) && Amount.Amount > 0)
 	{
 		int32 NumOfItems = Player->GetInventory()->GetNumItems(Amount.ItemClass);
 		int32 AmountToStore = FMath::Min(Amount.Amount, NumOfItems);
@@ -730,7 +730,7 @@ int32 AKPCLNetworkCore::TryToStoreItem(UFGInventoryComponent* Inventory, TSubcla
 
 int32 AKPCLNetworkCore::TryToStoreItemAmount(TSubclassOf<UFGItemDescriptor> Item, int32 Amount)
 {
-	if (IsItemBlacklisted(Item))
+	if (Amount <= 0 || IsItemBlacklisted(Item))
 	{
 		return 0;
 	}
@@ -744,7 +744,10 @@ int32 AKPCLNetworkCore::TryToStoreItemAmount(TSubclassOf<UFGItemDescriptor> Item
 int32 AKPCLNetworkCore::TryToGrabItem(UFGInventoryComponent* Inventory, TSubclassOf<UFGItemDescriptor> Item,
 									  int32 Amount, int32 InventorySlot)
 {
-	InventorySlot = FMath::Max(InventorySlot, 0);
+	if (!IsValid(Inventory) || Amount <= 0 || InventorySlot < 0 || IsItemBlacklisted(Item))
+	{
+		return 0;
+	}
 
 	int32 AddedAmount;
 	{
@@ -771,6 +774,10 @@ int32 AKPCLNetworkCore::TryToGrabItem(UFGInventoryComponent* Inventory, TSubclas
 
 int32 AKPCLNetworkCore::TryToGrabItemAmount(TSubclassOf<UFGItemDescriptor> Item, int32 Amount)
 {
+	if (Amount <= 0 || IsItemBlacklisted(Item))
+	{
+		return 0;
+	}
 	int32 RemovedAmount;
 	{
 
