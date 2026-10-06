@@ -335,9 +335,10 @@ bool UKBFLActorSpawnDescriptorBase::CheckWorld() const
 	if (GetWorld())
 	{
 #if WITH_EDITOR
-		const bool bMatches = FString("UEDPIE_0_").Append(mMapName) != GetWorld()->GetMapName();
+		const FString CurrentMapName = UGameplayStatics::GetCurrentLevelName(this, true);
+		const bool bMatches = mMapName == CurrentMapName;
 		UE_LOGFMT(KBFLActorSpawnerLog, Log, "CheckWorld (Editor): Expected '{0}', Current '{1}', Match: {2}",
-				  FString("UEDPIE_0_").Append(mMapName), GetWorld()->GetMapName(), bMatches);
+				  mMapName, CurrentMapName, bMatches);
 		return bMatches;
 #else
 		const bool bMatches = mMapName == GetWorld()->GetMapName();

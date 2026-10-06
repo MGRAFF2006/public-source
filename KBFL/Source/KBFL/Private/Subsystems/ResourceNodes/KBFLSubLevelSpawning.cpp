@@ -223,7 +223,7 @@ bool UKBFLSubLevelSpawning::CheckWorld() const
 	if (GetWorld())
 	{
 #if WITH_EDITOR
-		return FString("UEDPIE_0_").Append(mMapName) != GetWorld()->GetMapName();
+		return mMapName == UGameplayStatics::GetCurrentLevelName(this, true);
 #else
 		return mMapName == GetWorld()->GetMapName();
 #endif
