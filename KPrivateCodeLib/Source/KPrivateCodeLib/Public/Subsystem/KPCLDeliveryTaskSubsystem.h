@@ -368,6 +368,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "KMods|ResearchTree")
 	TArray<FKPCLResearchTreeEdge> GetResearchTreeEdges() const;
 
+	bool IsParentRequirementMet(UKAPIDeliveryTask* Child, UKAPIDeliveryTask* Parent) const;
+
 	UFUNCTION(BlueprintPure, Category = "KMods|ResearchTree")
 	bool GetResearchNode(UKAPIDeliveryTask* Task, FKPCLResearchTreeNode& OutNode) const;
 
@@ -537,8 +539,6 @@ private:
 	void InitializeTaskRequirements(FKPCLDeliveryTaskState& TaskState) const;
 	void NormalizeTaskState(FKPCLDeliveryTaskState& TaskState) const;
 	bool IsTaskStateComplete(const FKPCLDeliveryTaskState& TaskState) const;
-
-	bool IsParentRequirementMet(UKAPIDeliveryTask* Child, UKAPIDeliveryTask* Parent) const;
 
 	bool IsTaskLockedInternal(UKAPIDeliveryTask* Task, bool bPrerequisitesMet) const;
 	bool AreTaskQueuePrerequisitesMet(UKAPIDeliveryTask* Task, const TArray<UKAPIDeliveryTask*>& Queue,

@@ -1504,7 +1504,7 @@ void UKPCLDeliveryTreeWidget::RebuildResearchEdges()
 			Edge.mChild = ChildNode.mTask;
 			Edge.mParentCoordinate = Parent->mCoordinate;
 			Edge.mChildCoordinate = ChildNode.mCoordinate;
-			Edge.bParentCompleted = mDeliveryTaskSubsystem->IsTaskCompleted(Parent);
+			Edge.bParentCompleted = mDeliveryTaskSubsystem->IsParentRequirementMet(ChildNode.mTask, Parent);
 			Edge.bChildUnlocked = ChildNode.bPrerequisitesMet;
 		}
 	}
@@ -1537,14 +1537,17 @@ void UKPCLDeliveryTreeWidget::RefreshAffectedResearchEdges(UKAPIDeliveryTask* Ta
 	bool bEdgeChanged = false;
 	if (const TArray<int32>* ParentEdges = mParentEdgeIndicesByTask.Find(Task))
 	{
-		const bool bParentCompleted = mDeliveryTaskSubsystem->IsTaskCompleted(Task);
 		for (int32 EdgeIndex : *ParentEdges)
 		{
-			if (mResearchEdges.IsValidIndex(EdgeIndex) &&
-				mResearchEdges[EdgeIndex].bParentCompleted != bParentCompleted)
+			if (mResearchEdges.IsValidIndex(EdgeIndex))
 			{
-				mResearchEdges[EdgeIndex].bParentCompleted = bParentCompleted;
-				bEdgeChanged = true;
+				FKPCLResearchTreeEdge& Edge = mResearchEdges[EdgeIndex];
+				const bool bParentCompleted = mDeliveryTaskSubsystem->IsParentRequirementMet(Edge.mChild, Edge.mParent);
+				if (Edge.bParentCompleted != bParentCompleted)
+				{
+					Edge.bParentCompleted = bParentCompleted;
+					bEdgeChanged = true;
+				}
 			}
 		}
 	}
