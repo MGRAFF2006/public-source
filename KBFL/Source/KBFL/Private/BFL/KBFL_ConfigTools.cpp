@@ -73,7 +73,7 @@ UClass* UKBFL_ConfigTools::GetClassFromConfig(TSubclassOf<UModConfiguration> Con
 {
 	if (UConfigPropertyClass* Property = GetPropertyByKey<UConfigPropertyClass>(Config, Key, WorldContext))
 	{
-		return Property->BaseClass;
+		return Property->Value;
 	}
 	return nullptr;
 }
