@@ -145,8 +145,13 @@ bool UKPCLJsonObject::TryGetStringArray(FString StringField, TArray<FString>& Re
 		return false;
 	}
 
-	GetJson()->TryGetStringArrayField(StringField, Result);
-	return Result.Num() != 0;
+	TArray<FString> Parsed;
+	if (!GetJson()->TryGetStringArrayField(StringField, Parsed))
+	{
+		return false;
+	}
+	Result = MoveTemp(Parsed);
+	return true;
 }
 
 bool UKPCLJsonObject::TryGetJsonArray(FString StringField, TArray<UKPCLJsonObject*>& Result)
@@ -156,36 +161,30 @@ bool UKPCLJsonObject::TryGetJsonArray(FString StringField, TArray<UKPCLJsonObjec
 		return false;
 	}
 
-	Result.Empty();
-	const TArray<TSharedPtr<FJsonValue>>* DataArray;
-	if (GetJson()->TryGetArrayField(StringField, DataArray))
+	const TArray<TSharedPtr<FJsonValue>>* DataArray = nullptr;
+	if (!GetJson()->TryGetArrayField(StringField, DataArray) || !DataArray)
 	{
-		for (const TSharedPtr<FJsonValue>& ArrayElement : *DataArray)
+		return false;
+	}
+	for (const TSharedPtr<FJsonValue>& ArrayElement : *DataArray)
+	{
+		if (!ArrayElement.IsValid() || ArrayElement->Type != EJson::Object || !ArrayElement->AsObject().IsValid())
 		{
-			if (ArrayElement)
-			{
-				UKPCLJsonObject* ElementObj = CreateFromJson(ArrayElement->AsObject());
-				Result.Add(ElementObj);
-			}
+			return false;
 		}
 	}
-	return Result.Num() > 0;
+	TArray<UKPCLJsonObject*> Parsed;
+	for (const TSharedPtr<FJsonValue>& ArrayElement : *DataArray)
+	{
+		Parsed.Add(CreateFromJson(ArrayElement->AsObject()));
+	}
+	Result = MoveTemp(Parsed);
+	return true;
 }
 
 bool UKPCLJsonObject::TryGetJson(FString StringField, UKPCLJsonObject*& Result)
 {
-	if (!HasJsonObject())
-	{
-		return false;
-	}
-
-	Result = nullptr;
-	TSharedPtr<FJsonValue> Field = GetJson()->TryGetField(StringField);
-	if (Field)
-	{
-		Result = CreateFromJson(Field->AsObject());
-	}
-	return Result != nullptr;
+	return TryGetJsonObject(StringField, Result);
 }
 
 bool UKPCLJsonObject::TryGetJsonObject(FString StringField, UKPCLJsonObject*& Result)
@@ -195,12 +194,11 @@ bool UKPCLJsonObject::TryGetJsonObject(FString StringField, UKPCLJsonObject*& Re
 		return false;
 	}
 
-	const TSharedPtr<FJsonObject>* Json;
-	if (GetJson()->TryGetObjectField(StringField, Json))
+	const TSharedPtr<FJsonObject>* Json = nullptr;
+	if (GetJson()->TryGetObjectField(StringField, Json) && Json && Json->IsValid())
 	{
-		bool Success = false;
 		Result = CreateFromJson(*Json);
-		return Success;
+		return Result != nullptr;
 	}
 
 	return false;
