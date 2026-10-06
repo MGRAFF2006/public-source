@@ -334,7 +334,8 @@ namespace
 				CastField<FStructProperty>(FindStructMember(Work.NodeDataStruct->Struct, TEXT("Coordinates")));
 			if (SchematicMember != nullptr && CoordinateMember != nullptr)
 			{
-				Work.SchematicClass = Cast<UClass>(SchematicMember->GetObjectPropertyValue(Work.NodeDataPtr));
+				Work.SchematicClass =
+					Cast<UClass>(SchematicMember->GetObjectPropertyValue_InContainer(Work.NodeDataPtr));
 				Work.bHasCoordinate =
 					ReadGridPoint(CoordinateMember, CoordinateMember->ContainerPtrToValuePtr<void>(Work.NodeDataPtr),
 								  Work.Coordinate);
@@ -828,7 +829,7 @@ bool UKDFContentClassHandler::ApplyNodes(UObject* TreeCDO, const FKDFNode& Nodes
 					CastField<FClassProperty>(FindStructMember(Work.NodeDataStruct->Struct, TEXT("Schematic")));
 				if (SchematicMember != nullptr)
 				{
-					SchematicMember->SetObjectPropertyValue(Work.NodeDataPtr, SchematicClass);
+					SchematicMember->SetObjectPropertyValue_InContainer(Work.NodeDataPtr, SchematicClass);
 					Work.SchematicClass = SchematicClass;
 					ClaimedSchematics.Add(SchematicClass);
 				}
@@ -1073,7 +1074,7 @@ bool UKDFContentClassHandler::RemoveNodesBySchematic(UObject* TreeCDO, const FKD
 		const FStructProperty* Coordinate =
 			Data != nullptr ? CastField<FStructProperty>(FindStructMember(Data->Struct, TEXT("Coordinates"))) : nullptr;
 		UClass* SchematicClass =
-			Schematic != nullptr ? Cast<UClass>(Schematic->GetObjectPropertyValue(DataPtr)) : nullptr;
+			Schematic != nullptr ? Cast<UClass>(Schematic->GetObjectPropertyValue_InContainer(DataPtr)) : nullptr;
 		if (SchematicClass == nullptr || !SchematicsToRemove.Contains(SchematicClass))
 		{
 			continue;
