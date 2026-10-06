@@ -460,11 +460,16 @@ FString FRssJsonSerializer::TemplatesToJson(const TArray<FRssSignData>& Template
 	TArray<TSharedPtr<FJsonValue>> TemplateArray;
 	for (const FRssSignData& Template : Templates)
 	{
-		TSharedPtr<FJsonObject> TemplateJson = StructToJson(Template);
-		if (TemplateJson.IsValid())
+		if (!URssBlueprintFunctionLibrary::IsSignDataSafe(Template))
 		{
-			TemplateArray.Add(MakeShared<FJsonValueObject>(TemplateJson));
+			return FString();
 		}
+		TSharedPtr<FJsonObject> TemplateJson = StructToJson(Template);
+		if (!TemplateJson.IsValid())
+		{
+			return FString();
+		}
+		TemplateArray.Add(MakeShared<FJsonValueObject>(TemplateJson));
 	}
 
 	RootObject->SetArrayField(TEXT("templates"), TemplateArray);
@@ -494,7 +499,7 @@ bool FRssJsonSerializer::JsonToTemplates(const FString& JsonString, TArray<FRssS
 		return false;
 	}
 
-	OutTemplates.Empty();
+	TArray<FRssSignData> ParsedTemplates;
 	for (const TSharedPtr<FJsonValue>& Value : *TemplateArray)
 	{
 		if (!Value.IsValid() || Value->Type != EJson::Object)
@@ -513,9 +518,10 @@ bool FRssJsonSerializer::JsonToTemplates(const FString& JsonString, TArray<FRssS
 		{
 			return false;
 		}
-		OutTemplates.Add(Template);
+		ParsedTemplates.Add(Template);
 	}
 
+	OutTemplates = MoveTemp(ParsedTemplates);
 	return true;
 }
 

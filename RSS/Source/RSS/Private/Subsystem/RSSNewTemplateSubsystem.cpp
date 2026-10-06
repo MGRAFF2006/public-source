@@ -7,6 +7,46 @@
 #include "Serialization/RssJsonSerializer.h"
 #include "Subsystem/RSSImageSubsystem.h"
 #include "Subsystem/RSSTemplateSubsystem.h"
+#include "HAL/FileManager.h"
+#include "RssBlueprintFunctionLibrary.h"
+
+namespace
+{
+	bool ParseTemplates(UObject* WorldContext, const FString& Content, FRssTemplates& OutTemplates)
+	{
+		FRssTemplates Parsed;
+		const FString Trimmed = Content.TrimStartAndEnd();
+		if (Trimmed.StartsWith(TEXT("{")))
+		{
+			if (!FRssJsonSerializer::JsonToTemplates(Content, Parsed.mTemplates))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			if (!ARSSImageSubsystem::CheckString(Content, {"mTemplates"}))
+			{
+				return false;
+			}
+			const TCHAR* End = FRssTemplates::StaticStruct()->ImportText(*Content, &Parsed, WorldContext,
+				PPF_Copy | PPF_Delimited | PPF_IncludeTransient, nullptr, "FRssTemplates");
+			if (!End || !FString(End).TrimStartAndEnd().IsEmpty())
+			{
+				return false;
+			}
+		}
+		for (const FRssSignData& Template : Parsed.mTemplates)
+		{
+			if (!URssBlueprintFunctionLibrary::IsSignDataSafe(Template))
+			{
+				return false;
+			}
+		}
+		OutTemplates = MoveTemp(Parsed);
+		return true;
+	}
+}
 
 ARSSNewTemplateSubsystem::ARSSNewTemplateSubsystem()
 {
@@ -22,34 +62,13 @@ void ARSSNewTemplateSubsystem::BeginPlay() { Super::BeginPlay(); }
 bool ARSSNewTemplateSubsystem::GenerateFromFileInVar()
 {
 	FString FileContent;
-	if (ReadTemplatesFromFile(FileContent))
+	FRssTemplates Parsed;
+	if (!ReadTemplatesFromFile(FileContent) || !ParseTemplates(this, FileContent, Parsed))
 	{
-
-		FString TrimmedContent = FileContent.TrimStartAndEnd();
-		if (TrimmedContent.StartsWith(TEXT("{")))
-		{
-
-			TArray<FRssSignData> Templates;
-			if (FRssJsonSerializer::JsonToTemplates(FileContent, Templates))
-			{
-				mTemplates.mTemplates = Templates;
-				return true;
-			}
-		}
-		else if (!TrimmedContent.IsEmpty())
-		{
-
-			if (ARSSImageSubsystem::CheckString(FileContent, {"mSignType", "mSignTypeSize", "mTemplates"}))
-			{
-
-				mTemplates = StringToTemplates(this, FileContent);
-
-				SaveTemplatesToFile();
-				return true;
-			}
-		}
+		return false;
 	}
-	return false;
+	mTemplates = MoveTemp(Parsed);
+	return true;
 }
 
 bool ARSSNewTemplateSubsystem::ReadTemplatesFromFile(FString& FileContent)
@@ -79,30 +98,51 @@ FString ARSSNewTemplateSubsystem::GetFilePath()
 
 bool ARSSNewTemplateSubsystem::MigrateFromOld()
 {
-	SaveTemplatesToFile();
-	if (HasAuthority())
+	if (!HasAuthority())
 	{
-		GenerateFromFileInVar();
-
-		ARSSTemplateSubsystem* Subsystem = ARSSTemplateSubsystem::GetOldRSSTemplateSubsystem(this);
-		if (Subsystem)
-		{
-			for (FRssSignData Template : Subsystem->mTemplates)
-			{
-				AddTemplate(Template);
-			}
-			Subsystem->ClearTemplates();
-		}
-		else
+		return false;
+	}
+	ARSSTemplateSubsystem* Subsystem = ARSSTemplateSubsystem::GetOldRSSTemplateSubsystem(this);
+	if (!IsValid(Subsystem) || Subsystem->HasAnyFlags(RF_ClassDefaultObject) ||
+		Subsystem->GetWorld() != GetWorld() || !Subsystem->HasAuthority())
+	{
+		return false;
+	}
+	FRssTemplates Migrated = mTemplates;
+	if (IFileManager::Get().FileExists(*GetFilePath()))
+	{
+		FString Content;
+		if (!ReadTemplatesFromFile(Content) || !ParseTemplates(this, Content, Migrated))
 		{
 			return false;
 		}
 	}
+	for (const FRssSignData& Template : Subsystem->mTemplates)
+	{
+		if (!URssBlueprintFunctionLibrary::IsSignDataSafe(Template))
+		{
+			return false;
+		}
+	}
+	const FRssTemplates PreviousTemplates = mTemplates;
+	Migrated.mTemplates.Append(Subsystem->mTemplates);
+	mTemplates = MoveTemp(Migrated);
+	if (!SaveTemplatesToFile())
+	{
+		mTemplates = PreviousTemplates;
+		return false;
+	}
+	Subsystem->ClearTemplates();
 	return true;
 }
 
 bool ARSSNewTemplateSubsystem::SaveTemplatesToFile()
 {
+	const FString Data = FRssJsonSerializer::TemplatesToJson(mTemplates.mTemplates);
+	if (Data.IsEmpty())
+	{
+		return false;
+	}
 	const FString FilePath = GetFilePath();
 
 	IPlatformFile& FileManager = FPlatformFileManager::Get().GetPlatformFile();
@@ -117,8 +157,19 @@ bool ARSSNewTemplateSubsystem::SaveTemplatesToFile()
 		}
 	}
 
-	FString Data = FRssJsonSerializer::TemplatesToJson(mTemplates.mTemplates);
-	return FFileHelper::SaveStringToFile(Data, *FilePath);
+	const FString TemporaryPath = FilePath + TEXT(".tmp-") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	IFileManager& Files = IFileManager::Get();
+	if (!FFileHelper::SaveStringToFile(Data, *TemporaryPath))
+	{
+		Files.Delete(*TemporaryPath);
+		return false;
+	}
+	if (!Files.Move(*FilePath, *TemporaryPath, true, false, false, true))
+	{
+		UE_LOG(LogTemp, Error, TEXT("RSS: template replacement failed; staged catalog path: %s"), *TemporaryPath);
+		return false;
+	}
+	return true;
 }
 
 FString ARSSNewTemplateSubsystem::TemplatesToString(UObject* WorldContext, FRssTemplates Templates)
