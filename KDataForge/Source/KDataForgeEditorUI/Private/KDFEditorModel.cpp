@@ -207,10 +207,13 @@ namespace
 
 void UKDFEditorModel::Initialize(UWorld* World)
 {
+	if (mWorld.Get() != World)
+	{
+		mUndoStack.Reset();
+		mRedoStack.Reset();
+	}
 	mWorld = World;
 	mSelectedObject.Reset();
-	mUndoStack.Reset();
-	mRedoStack.Reset();
 	mCategories = {MakeShared<FString>(CategoryRecipes),   MakeShared<FString>(CategorySchematics),
 				   MakeShared<FString>(CategoryResearch),  MakeShared<FString>(CategoryItems),
 				   MakeShared<FString>(CategoryBuildings), MakeShared<FString>(CategoryDataAssets),
