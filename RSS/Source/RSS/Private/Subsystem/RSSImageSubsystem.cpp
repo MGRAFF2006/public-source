@@ -112,20 +112,8 @@ void ARSSImageSubsystem::Tick(float DeltaSeconds)
 		mSaveDirtyAccumulator += DeltaSeconds;
 		if (mSaveDirtyAccumulator >= mSaveDebounceTime)
 		{
-			bSaveDataDirty = false;
 			mSaveDirtyAccumulator = 0.f;
-
-			GenerateInformation();
-			FString SerializedData = FRssJsonSerializer::CustomDataToJson(mInformation);
-			FString FilePath = GetFilePath();
-			if (!SerializedData.IsEmpty())
-			{
-				AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask,
-				          [SerializedData = MoveTemp(SerializedData), FilePath = MoveTemp(FilePath)]()
-				          {
-					          FFileHelper::SaveStringToFile(SerializedData, *FilePath);
-				          });
-			}
+			bSaveDataDirty = !SaveCustomDataToFileInternal();
 		}
 	}
 
