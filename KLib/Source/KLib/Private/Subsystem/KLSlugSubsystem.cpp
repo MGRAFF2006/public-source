@@ -66,6 +66,7 @@ TArray<TSubclassOf<UFGItemDescriptor>> AKLSlugSubsystem::GetAllBreededEgg() cons
 				Slugs.AddUnique(HatchingData->mEgg);
 			}
 		}
+		return Slugs;
 	}
 	return mBreededEggs;
 }
@@ -101,6 +102,7 @@ TArray<TSubclassOf<UFGItemDescriptor>> AKLSlugSubsystem::GetAllBreededSlugs() co
 				Slugs.AddUnique(HatchingData->mSlug);
 			}
 		}
+		return Slugs;
 	}
 	return mBreededSlugs;
 }
