@@ -73,6 +73,7 @@ void AKPCLNetworkDelivery::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AKPCLNetworkDelivery::Tick(float Dt)
 {
 	Super::Tick(Dt);
+	BindCoreSettings(GetFaxitCore());
 	if (GetNetMode() == NM_DedicatedServer)
 	{
 		return;
@@ -116,7 +117,12 @@ void AKPCLNetworkDelivery::OnNetworkDestoryed_Internal()
 
 void AKPCLNetworkDelivery::BindCoreSettings(AKPCLNetworkCore* Core)
 {
-	if (!IsValid(Core) || mBoundSettingsCore.Get() == Core)
+	if (!IsValid(Core))
+	{
+		UnbindCoreSettings();
+		return;
+	}
+	if (mBoundSettingsCore.Get() == Core)
 	{
 		return;
 	}
