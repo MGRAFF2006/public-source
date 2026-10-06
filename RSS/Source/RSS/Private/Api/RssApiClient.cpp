@@ -36,6 +36,37 @@ namespace
 	}
 }
 
+bool URssApiClient::ParseDesignList(const FString& Content, TArray<FRssSignData>& OutDesigns)
+{
+	TSharedPtr<FJsonObject> RootObject;
+	const TArray<TSharedPtr<FJsonValue>>* DesignArray = nullptr;
+	if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Content), RootObject) ||
+		!RootObject.IsValid() || !RootObject->TryGetArrayField(TEXT("data"), DesignArray) || !DesignArray)
+	{
+		return false;
+	}
+
+	TArray<FRssSignData> Parsed;
+	for (const TSharedPtr<FJsonValue>& Value : *DesignArray)
+	{
+		if (!Value.IsValid() || Value->Type != EJson::Object)
+		{
+			return false;
+		}
+		const TSharedPtr<FJsonObject> DesignObject = Value->AsObject();
+		const TSharedPtr<FJsonObject>* SignDataObject = nullptr;
+		FRssSignData SignData;
+		if (!DesignObject.IsValid() || !DesignObject->TryGetObjectField(TEXT("signData"), SignDataObject) ||
+			!SignDataObject || !DeserializeSignDataObject(*SignDataObject, SignData))
+		{
+			return false;
+		}
+		Parsed.Add(MoveTemp(SignData));
+	}
+	OutDesigns = MoveTemp(Parsed);
+	return true;
+}
+
 TMap<TWeakObjectPtr<UWorld>, TWeakObjectPtr<URssApiClient>> URssApiClient::Instances;
 
 URssApiClient* URssApiClient::Get(UObject* WorldContextObject)
@@ -152,40 +183,16 @@ void URssApiClient::OnFetchOwnDesignsResponse(FHttpRequestPtr HttpRequest, FHttp
 		FString ResponseStr = HttpResponse->GetContentAsString();
 		UE_LOG(RSSApiClientLog, Verbose, TEXT("OwnDesigns response: %s"), *ResponseStr);
 
-		TSharedPtr<FJsonObject> RootObject;
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseStr);
-		if (FJsonSerializer::Deserialize(Reader, RootObject) && RootObject.IsValid())
+		if (ParseDesignList(ResponseStr, Designs))
 		{
-			const TArray<TSharedPtr<FJsonValue>>* DesignArray = nullptr;
-			if (RootObject->TryGetArrayField(TEXT("data"), DesignArray) && DesignArray != nullptr)
-			{
-				for (const TSharedPtr<FJsonValue>& Value : *DesignArray)
-				{
-					if (Value.IsValid() && Value->Type == EJson::Object)
-					{
-						TSharedPtr<FJsonObject> DesignObj = Value->AsObject();
-						const TSharedPtr<FJsonObject>* SignDataObj = nullptr;
-						if (DesignObj.IsValid() && DesignObj->TryGetObjectField(TEXT("signData"), SignDataObj) &&
-							SignDataObj != nullptr)
-						{
-							FRssSignData SignData;
-							if (DeserializeSignDataObject(*SignDataObj, SignData))
-							{
-								Designs.Add(SignData);
-							}
-						}
-					}
-				}
-			}
+			OnSignDesignListFetched.Broadcast(true, Designs);
+			PendingRequests.Remove(HttpRequest);
+			return;
 		}
-
-		OnSignDesignListFetched.Broadcast(true, Designs);
-		PendingRequests.Remove(HttpRequest);
-		return;
 	}
 
 	int32 ErrorCode = HttpResponse.IsValid() ? HttpResponse->GetResponseCode() : 0;
-	FString ErrorMsg = bSucceeded ? TEXT("Unknown error") : TEXT("Request failed");
+	FString ErrorMsg = bSucceeded ? TEXT("Invalid design list response") : TEXT("Request failed");
 	OnApiError.Broadcast(ErrorCode, ErrorMsg);
 	OnSignDesignListFetched.Broadcast(false, Designs);
 	PendingRequests.Remove(HttpRequest);
@@ -240,40 +247,16 @@ void URssApiClient::OnFetchPublicDesignsResponse(FHttpRequestPtr HttpRequest, FH
 		FString ResponseStr = HttpResponse->GetContentAsString();
 		UE_LOG(RSSApiClientLog, Verbose, TEXT("PublicDesigns response size: %d bytes"), ResponseStr.Len());
 
-		TSharedPtr<FJsonObject> RootObject;
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseStr);
-		if (FJsonSerializer::Deserialize(Reader, RootObject) && RootObject.IsValid())
+		if (ParseDesignList(ResponseStr, Designs))
 		{
-			const TArray<TSharedPtr<FJsonValue>>* DesignArray = nullptr;
-			if (RootObject->TryGetArrayField(TEXT("data"), DesignArray) && DesignArray != nullptr)
-			{
-				for (const TSharedPtr<FJsonValue>& Value : *DesignArray)
-				{
-					if (Value.IsValid() && Value->Type == EJson::Object)
-					{
-						TSharedPtr<FJsonObject> DesignObj = Value->AsObject();
-						const TSharedPtr<FJsonObject>* SignDataObj = nullptr;
-						if (DesignObj.IsValid() && DesignObj->TryGetObjectField(TEXT("signData"), SignDataObj) &&
-							SignDataObj != nullptr)
-						{
-							FRssSignData SignData;
-							if (DeserializeSignDataObject(*SignDataObj, SignData))
-							{
-								Designs.Add(SignData);
-							}
-						}
-					}
-				}
-			}
+			OnSignDesignListFetched.Broadcast(true, Designs);
+			PendingRequests.Remove(HttpRequest);
+			return;
 		}
-
-		OnSignDesignListFetched.Broadcast(true, Designs);
-		PendingRequests.Remove(HttpRequest);
-		return;
 	}
 
 	int32 ErrorCode = HttpResponse.IsValid() ? HttpResponse->GetResponseCode() : 0;
-	FString ErrorMsg = bSucceeded ? TEXT("Unknown error") : TEXT("Request failed");
+	FString ErrorMsg = bSucceeded ? TEXT("Invalid design list response") : TEXT("Request failed");
 	OnApiError.Broadcast(ErrorCode, ErrorMsg);
 	OnSignDesignListFetched.Broadcast(false, Designs);
 	PendingRequests.Remove(HttpRequest);

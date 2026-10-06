@@ -55,6 +55,9 @@ public:
 	FOnApiError OnApiError;
 
 private:
+	friend class FRssApiListValidationTest;
+	static bool ParseDesignList(const FString& Content, TArray<FRssSignData>& OutDesigns);
+
 
 	void OnFetchOwnDesignsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 	void OnFetchDesignByIdResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
