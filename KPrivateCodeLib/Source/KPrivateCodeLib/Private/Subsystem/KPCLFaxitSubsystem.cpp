@@ -85,7 +85,7 @@ int32 FKPCLMappedItemAmount::GetSpaceFor_NoLock(TSubclassOf<UFGItemDescriptor> I
 	if (HasItem_NoLock(InItem))
 	{
 		int32 CurrentAmount = mItemAmounts[InItem];
-		int32 AvailableSpace = TotalStackSize - CurrentAmount;
+		int32 AvailableSpace = FMath::Max(0, TotalStackSize - CurrentAmount);
 		return FMath::Min(Amount, AvailableSpace);
 	}
 	if (CanAddNewItemSlot_NoLock(InItem))
@@ -284,19 +284,6 @@ void FKPCLMappedItemAmount::CleanUpEmptySlots(TSet<TSubclassOf<UFGItemDescriptor
 	for (const TSubclassOf<UFGItemDescriptor>& Key : KeysToRemove)
 	{
 		RemoveItemFromStorage_NoLock(Key);
-	}
-
-	if (mMaxUniqueItems > -1)
-	{
-		while (mItemAmounts.Num() > mMaxUniqueItems)
-		{
-			TSubclassOf<UFGItemDescriptor> LastKey;
-			for (const auto& pair : mItemAmounts)
-			{
-				LastKey = pair.Key;
-			}
-			RemoveItemFromStorage_NoLock(LastKey);
-		}
 	}
 }
 
