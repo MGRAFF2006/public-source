@@ -61,7 +61,11 @@ private:
 	void OnFetchPublicDesignsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 	void OnFetchDesignLimitsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 
-	void MakeAuthenticatedRequest(const FString& Endpoint, const FString& QueryParams = FString());
+	friend class FRssApiDesignEndpointTest;
+	using FResponseHandler = void (URssApiClient::*)(FHttpRequestPtr, FHttpResponsePtr, bool);
+	static FString BuildDesignEndpoint(const FString& DesignId);
+	void MakeAuthenticatedRequest(const FString& Endpoint, FResponseHandler ResponseHandler,
+								  const FString& QueryParams = FString());
 
 	UPROPERTY()
 	FString BaseUrl = TEXT("https://k-mods.com/api/v2/rss");
