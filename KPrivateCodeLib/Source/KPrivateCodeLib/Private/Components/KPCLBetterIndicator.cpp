@@ -2,7 +2,7 @@
 
 #include "Components/KPCLBetterIndicator.h"
 
-UKPCLBetterIndicator::UKPCLBetterIndicator() { mCustomExtraData = {3.0f, .0f, 0.473958f, 0.026989f}; }
+UKPCLBetterIndicator::UKPCLBetterIndicator() { mCustomExtraData = {3.0f, .0f, 0.473958f, 0.026989f, .0f}; }
 
 float UKPCLBetterIndicator::GetEmissive() const
 {
