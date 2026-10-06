@@ -241,8 +241,9 @@ void UKAPIDataAssetSubsystem::ScanForAllowList()
 	TArray<UKAPIExtractorAllowList*> Objects;
 	FindAllDataAssetsOfClass(Objects);
 
-	for (UKAPIExtractorAllowList* Object : Objects)
+	for (int32 Index = Objects.Num() - 1; Index >= 0; --Index)
 	{
+		UKAPIExtractorAllowList* Object = Objects[Index];
 		for (TSubclassOf<UFGResourceDescriptor> AllowedResource : Object->mAllowedResources)
 		{
 			mAllowedScannableResources.Add(AllowedResource);
