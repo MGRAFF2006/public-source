@@ -47,23 +47,7 @@ void AKPCLSwatchSystem::RemoveCustomSwatchData(int32 Idx)
 	{
 		if (mCustomSwatchData.IsValidIndex(Idx))
 		{
-			const FCustomSwatchData OldCustomSwatchData = mCustomSwatchData[Idx];
-			TArray<FCustomSwatchData> NewArray;
-
-			bool WasRemove = false;
-			for (FCustomSwatchData CustomSwatchData : mCustomSwatchData)
-			{
-				if (CustomSwatchData != OldCustomSwatchData || WasRemove)
-				{
-					NewArray.Add(CustomSwatchData);
-				}
-				else
-				{
-					WasRemove = true;
-				}
-			}
-
-			mCustomSwatchData = NewArray;
+			mCustomSwatchData.RemoveAt(Idx);
 			OnRep_CustomSwatchData();
 		}
 	}
