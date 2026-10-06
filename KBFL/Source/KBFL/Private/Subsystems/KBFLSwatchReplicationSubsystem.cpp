@@ -33,7 +33,7 @@ TSubclassOf<UFGFactoryCustomizationDescriptor_Swatch> FKBFLReplicatedColorSlot::
 	}
 
 	TSoftClassPtr<UFGFactoryCustomizationDescriptor_Swatch> SoftClass = GetSoftClass();
-	if (!SoftClass.IsValid())
+	if (SoftClass.IsNull())
 	{
 		UE_LOG(CustomizerSubsystem, Warning, TEXT("Failed to load Swatch Class from path: %s"), *mPath);
 		return nullptr;
