@@ -308,7 +308,7 @@ void FKPCLMappedItemAmount::RemoveItemFromStorage(TSubclassOf<UFGItemDescriptor>
 
 void FKPCLMappedItemAmount::TickReplication()
 {
-	FRWScopeLock ReadLock(mItemAmountsLock, SLT_ReadOnly);
+	FRWScopeLock WriteLock(mItemAmountsLock, SLT_Write);
 	TArray<FItemAmount> ReplicatedArray;
 	for (TPair<TSubclassOf<UFGItemDescriptor>, int> Amount : mItemAmounts)
 	{
