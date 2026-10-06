@@ -107,33 +107,33 @@ void AKBFLUtilHologram::SetHologramLocationAndRotation(const FHitResult& hitResu
 
 void AKBFLUtilHologram::Scroll(int32 delta)
 {
-	if (IsCurrentBuildMode(mBuildModes[0]))
+	if (mBuildModes.IsValidIndex(0) && IsCurrentBuildMode(mBuildModes[0]))
 	{
 		AddRotation.Yaw += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[1]))
+	if (mBuildModes.IsValidIndex(1) && IsCurrentBuildMode(mBuildModes[1]))
 	{
 		AddRotation.Pitch += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[2]))
+	if (mBuildModes.IsValidIndex(2) && IsCurrentBuildMode(mBuildModes[2]))
 	{
 		AddRotation.Roll += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[3]))
+	if (mBuildModes.IsValidIndex(3) && IsCurrentBuildMode(mBuildModes[3]))
 	{
 		AddVector.Z += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[4]))
+	if (mBuildModes.IsValidIndex(4) && IsCurrentBuildMode(mBuildModes[4]))
 	{
 		Scale.X += ScaleMulti * delta;
 		Scale.Y += ScaleMulti * delta;
 		Scale.Z += ScaleMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[5]))
+	if (mBuildModes.IsValidIndex(5) && IsCurrentBuildMode(mBuildModes[5]))
 	{
 		AddVector.Y += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[6]))
+	if (mBuildModes.IsValidIndex(6) && IsCurrentBuildMode(mBuildModes[6]))
 	{
 		AddVector.X += ScrollMulti * delta;
 	}
@@ -143,23 +143,23 @@ void AKBFLUtilHologram::Scroll(int32 delta)
 
 void AKBFLUtilHologram::ScrollRotate(int32 delta, int32 step)
 {
-	if (IsCurrentBuildMode(mBuildModes[0]))
+	if (mBuildModes.IsValidIndex(0) && IsCurrentBuildMode(mBuildModes[0]))
 	{
 		AddRotation.Yaw += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[1]))
+	if (mBuildModes.IsValidIndex(1) && IsCurrentBuildMode(mBuildModes[1]))
 	{
 		AddRotation.Pitch += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[2]))
+	if (mBuildModes.IsValidIndex(2) && IsCurrentBuildMode(mBuildModes[2]))
 	{
 		AddRotation.Roll += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[3]))
+	if (mBuildModes.IsValidIndex(3) && IsCurrentBuildMode(mBuildModes[3]))
 	{
 		AddVector.Z += ScrollMulti * delta;
 	}
-	if (IsCurrentBuildMode(mBuildModes[4]))
+	if (mBuildModes.IsValidIndex(4) && IsCurrentBuildMode(mBuildModes[4]))
 	{
 		Scale.X += ScaleMulti * delta;
 		Scale.Y += ScaleMulti * delta;
