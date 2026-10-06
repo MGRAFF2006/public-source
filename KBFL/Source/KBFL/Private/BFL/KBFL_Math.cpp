@@ -41,5 +41,5 @@ float UKBFL_Math::CalculateM3PerMin(int ItemCount, float ProductionTime)
 
 float UKBFL_Math::CalculateM3PerMinForWidget(int ItemCount, float ProductionTime)
 {
-	return (60.0f / ProductionTime) * static_cast<float>(ItemCount) / 1000.0f / 60.0f;
+	return CalculateM3PerMin(ItemCount, ProductionTime);
 }
