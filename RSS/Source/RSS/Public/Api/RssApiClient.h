@@ -66,6 +66,7 @@ private:
 	friend class URssApiFetchPublicDesignsAction;
 	friend class URssApiFetchDesignLimitsAction;
 	friend class FRssApiRequestCorrelationTest;
+	friend class FRssApiDesignEndpointTest;
 	FHttpRequestPtr CreateOwnDesignsRequest(int32 Limit, int32 Offset);
 	FHttpRequestPtr CreateDesignByIdRequest(const FString& DesignId);
 	FHttpRequestPtr CreatePublicDesignsRequest(int32 Limit, int32 Offset);
@@ -86,7 +87,10 @@ private:
 	void OnFetchPublicDesignsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 	void OnFetchDesignLimitsResponse(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 
-	FHttpRequestPtr MakeAuthenticatedRequest(const FString& Endpoint, const FString& QueryParams = FString());
+	using FResponseHandler = void (URssApiClient::*)(FHttpRequestPtr, FHttpResponsePtr, bool);
+	static FString BuildDesignEndpoint(const FString& DesignId);
+	FHttpRequestPtr MakeAuthenticatedRequest(const FString& Endpoint, FResponseHandler ResponseHandler,
+		const FString& QueryParams = FString());
 
 	UPROPERTY()
 	FString BaseUrl = TEXT("https://k-mods.com/api/v2/rss");

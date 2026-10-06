@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "HttpModule.h"
+#include "GenericPlatform/GenericPlatformHttp.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -88,7 +89,8 @@ void URssApiClient::FetchOwnDesigns(UObject* WorldContextObject, int32 Limit, in
 
 FHttpRequestPtr URssApiClient::CreateOwnDesignsRequest(int32 Limit, int32 Offset)
 {
-	return MakeAuthenticatedRequest(TEXT("/designs"), FString::Printf(TEXT("?limit=%d&offset=%d"), Limit, Offset));
+	return MakeAuthenticatedRequest(TEXT("/designs"), &URssApiClient::OnFetchOwnDesignsResponse,
+		FString::Printf(TEXT("?limit=%d&offset=%d"), Limit, Offset));
 }
 
 void URssApiClient::FetchDesignById(UObject* WorldContextObject, const FString& DesignId)
@@ -98,7 +100,7 @@ void URssApiClient::FetchDesignById(UObject* WorldContextObject, const FString& 
 
 FHttpRequestPtr URssApiClient::CreateDesignByIdRequest(const FString& DesignId)
 {
-	return MakeAuthenticatedRequest(FString::Printf(TEXT("/designs/%s"), *DesignId));
+	return MakeAuthenticatedRequest(BuildDesignEndpoint(DesignId), &URssApiClient::OnFetchDesignByIdResponse);
 }
 
 void URssApiClient::FetchPublicDesigns(UObject* WorldContextObject, int32 Limit, int32 Offset)
@@ -108,7 +110,8 @@ void URssApiClient::FetchPublicDesigns(UObject* WorldContextObject, int32 Limit,
 
 FHttpRequestPtr URssApiClient::CreatePublicDesignsRequest(int32 Limit, int32 Offset)
 {
-	return MakeAuthenticatedRequest(TEXT("/designs/public"), FString::Printf(TEXT("?limit=%d&offset=%d"), Limit, Offset));
+	return MakeAuthenticatedRequest(TEXT("/designs/public"), &URssApiClient::OnFetchPublicDesignsResponse,
+		FString::Printf(TEXT("?limit=%d&offset=%d"), Limit, Offset));
 }
 
 void URssApiClient::FetchDesignLimits(UObject* WorldContextObject)
@@ -118,7 +121,7 @@ void URssApiClient::FetchDesignLimits(UObject* WorldContextObject)
 
 FHttpRequestPtr URssApiClient::CreateDesignLimitsRequest()
 {
-	return MakeAuthenticatedRequest(TEXT("/limits"));
+	return MakeAuthenticatedRequest(TEXT("/limits"), &URssApiClient::OnFetchDesignLimitsResponse);
 }
 
 void URssApiClient::StartRequest(FHttpRequestPtr Request)
@@ -129,7 +132,13 @@ void URssApiClient::StartRequest(FHttpRequestPtr Request)
 	}
 }
 
-FHttpRequestPtr URssApiClient::MakeAuthenticatedRequest(const FString& Endpoint, const FString& QueryParams)
+FString URssApiClient::BuildDesignEndpoint(const FString& DesignId)
+{
+	return FString::Printf(TEXT("/designs/%s"), *FGenericPlatformHttp::UrlEncode(DesignId));
+}
+
+FHttpRequestPtr URssApiClient::MakeAuthenticatedRequest(const FString& Endpoint, FResponseHandler ResponseHandler,
+	const FString& QueryParams)
 {
 	FHttpModule& HttpModule = FHttpModule::Get();
 	FHttpRequestPtr Request = HttpModule.CreateRequest();
@@ -147,24 +156,7 @@ FHttpRequestPtr URssApiClient::MakeAuthenticatedRequest(const FString& Endpoint,
 
 	UE_LOG(RSSApiClientLog, Log, TEXT("Making request to: %s"), *Url);
 
-	if (Endpoint.Contains(TEXT("public")))
-	{
-		Request->OnProcessRequestComplete().BindUObject(this, &URssApiClient::OnFetchPublicDesignsResponse);
-	}
-	else if (Endpoint.Contains(TEXT("limits")))
-	{
-		Request->OnProcessRequestComplete().BindUObject(this, &URssApiClient::OnFetchDesignLimitsResponse);
-	}
-	else if (Endpoint.StartsWith(TEXT("/designs/")) && !Endpoint.EndsWith(TEXT("/public")))
-	{
-
-		Request->OnProcessRequestComplete().BindUObject(this, &URssApiClient::OnFetchDesignByIdResponse);
-	}
-	else
-	{
-
-		Request->OnProcessRequestComplete().BindUObject(this, &URssApiClient::OnFetchOwnDesignsResponse);
-	}
+	Request->OnProcessRequestComplete().BindUObject(this, ResponseHandler);
 
 	PendingRequests.Add(Request, Endpoint);
 	return Request;

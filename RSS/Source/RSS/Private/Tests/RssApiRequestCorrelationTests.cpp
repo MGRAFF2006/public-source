@@ -57,6 +57,26 @@ bool FRssApiRequestCorrelationTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("Global errors cannot finish limits action"), Limits->bCompleted);
 	Client->CompleteLimitsRequest(Limits->Request, false, 200, TEXT("Malformed limits"));
 	TestTrue(TEXT("Limits response completes its own action"), Limits->bCompleted);
+
+	URssApiFetchDesignByIdAction* Routed = NewObject<URssApiFetchDesignByIdAction>();
+	Routed->ApiClient = Client;
+	const FString RoutedId = TEXT("public-limits/a?b#c");
+	Routed->Request = Client->CreateDesignByIdRequest(RoutedId);
+	Client->OnDesignRequestComplete.AddUObject(Routed, &URssApiFetchDesignByIdAction::OnRequestComplete);
+	TestTrue(TEXT("The factory encodes the ID as one path segment"),
+		Routed->Request->GetURL().EndsWith(Client->BuildDesignEndpoint(RoutedId)));
+	TestFalse(TEXT("The factory does not expose ID path separators"), Routed->Request->GetURL().Contains(TEXT("/a?b#c")));
+	int32 WrongOperationResults = 0;
+	Client->OnListRequestComplete.AddLambda([&WrongOperationResults](FHttpRequestPtr, bool,
+		const TArray<FRssSignData>&, int32, const FString&) { ++WrongOperationResults; });
+	Client->OnLimitsRequestComplete.AddLambda([&WrongOperationResults](FHttpRequestPtr, bool, int32,
+		const FString&) { ++WrongOperationResults; });
+	Routed->Request->OnProcessRequestComplete().ExecuteIfBound(Routed->Request, nullptr, false);
+	TestTrue(TEXT("The actual factory callback completes a by-ID action containing operation names"), Routed->bCompleted);
+	TestEqual(TEXT("The actual callback does not route an ID into another operation"), WrongOperationResults, 0);
+	TestEqual(TEXT("Routed completion removes its pending request"), Client->PendingRequests.Num(), 0);
+	Client->OnListRequestComplete.Clear();
+	Client->OnLimitsRequestComplete.Clear();
 	return true;
 }
 
