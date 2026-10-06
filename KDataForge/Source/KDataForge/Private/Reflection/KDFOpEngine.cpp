@@ -754,8 +754,23 @@ namespace
 	bool SetInstancedObjectProperty(UObject* Outer, const FObjectProperty* Property, void* ValuePtr,
 									const FKDFNode& Value, FString& OutError)
 	{
-		if (Property == nullptr || !Value.IsScalar())
+		if (Property == nullptr)
 		{
+			return false;
+		}
+		if (Value.IsMap())
+		{
+			UObject* Instance = MakeInstancedObjectFromNode(Outer, Property, Value, OutError);
+			if (Instance == nullptr)
+			{
+				return false;
+			}
+			Property->SetObjectPropertyValue(ValuePtr, Instance);
+			return true;
+		}
+		if (!Value.IsScalar())
+		{
+			OutError = TEXT("Expected an instanced class path or a map with 'class' and 'properties'");
 			return false;
 		}
 		if (Value.Scalar.IsEmpty() || Value.Scalar.Equals(TEXT("none"), ESearchCase::IgnoreCase))
