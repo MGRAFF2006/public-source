@@ -87,6 +87,7 @@ public:
 														 int32 Offset = 0);
 
 	virtual void Activate() override;
+	virtual void SetReadyToDestroy() override;
 
 	UPROPERTY(BlueprintAssignable, Category = "RSS API")
 	FOnSignDesignListFetched OnSuccess;
@@ -95,6 +96,10 @@ public:
 	FOnApiError OnFailed;
 
 private:
+	friend class FRssApiActionLifecycleTest;
+	bool bActivated = false;
+	bool bCompleted = false;
+
 	UPROPERTY()
 	URssApiClient* ApiClient;
 
@@ -120,6 +125,7 @@ public:
 	static URssApiFetchDesignByIdAction* FetchDesignById(UObject* WorldContextObject, const FString& DesignId);
 
 	virtual void Activate() override;
+	virtual void SetReadyToDestroy() override;
 
 	UPROPERTY(BlueprintAssignable, Category = "RSS API")
 	FOnSignDesignFetched OnSuccess;
@@ -128,6 +134,10 @@ public:
 	FOnApiError OnFailed;
 
 private:
+	friend class FRssApiActionLifecycleTest;
+	bool bActivated = false;
+	bool bCompleted = false;
+
 	UPROPERTY()
 	URssApiClient* ApiClient;
 
@@ -153,6 +163,7 @@ public:
 															   int32 Offset = 0);
 
 	virtual void Activate() override;
+	virtual void SetReadyToDestroy() override;
 
 	UPROPERTY(BlueprintAssignable, Category = "RSS API")
 	FOnSignDesignListFetched OnSuccess;
@@ -161,6 +172,10 @@ public:
 	FOnApiError OnFailed;
 
 private:
+	friend class FRssApiActionLifecycleTest;
+	bool bActivated = false;
+	bool bCompleted = false;
+
 	UPROPERTY()
 	URssApiClient* ApiClient;
 
@@ -186,6 +201,7 @@ public:
 	static URssApiFetchDesignLimitsAction* FetchDesignLimits(UObject* WorldContextObject);
 
 	virtual void Activate() override;
+	virtual void SetReadyToDestroy() override;
 
 	UPROPERTY(BlueprintAssignable, Category = "RSS API")
 	FOnApiError OnSuccess;
@@ -194,6 +210,10 @@ public:
 	FOnApiError OnFailed;
 
 private:
+	friend class FRssApiActionLifecycleTest;
+	bool bActivated = false;
+	bool bCompleted = false;
+
 	UPROPERTY()
 	URssApiClient* ApiClient;
 

@@ -311,6 +311,7 @@ URssApiFetchOwnDesignsAction* URssApiFetchOwnDesignsAction::FetchOwnDesigns(UObj
 																			int32 Offset)
 {
 	URssApiFetchOwnDesignsAction* Action = NewObject<URssApiFetchOwnDesignsAction>();
+	Action->RegisterWithGameInstance(WorldContextObject);
 	Action->ApiClient = URssApiClient::Get(WorldContextObject);
 	Action->LimitParam = Limit;
 	Action->OffsetParam = Offset;
@@ -319,9 +320,16 @@ URssApiFetchOwnDesignsAction* URssApiFetchOwnDesignsAction::FetchOwnDesigns(UObj
 
 void URssApiFetchOwnDesignsAction::Activate()
 {
-	if (!ApiClient)
+	if (bActivated || bCompleted)
 	{
+		return;
+	}
+	bActivated = true;
+	if (!IsValid(ApiClient))
+	{
+		bCompleted = true;
 		OnFailed.Broadcast(400, TEXT("API client not available"));
+		SetReadyToDestroy();
 		return;
 	}
 
@@ -333,6 +341,11 @@ void URssApiFetchOwnDesignsAction::Activate()
 
 void URssApiFetchOwnDesignsAction::OnListFetched(bool bSuccess, const TArray<FRssSignData>& Designs)
 {
+	if (bCompleted)
+	{
+		return;
+	}
+	bCompleted = true;
 	if (bSuccess)
 	{
 		OnSuccess.Broadcast(true, Designs);
@@ -346,14 +359,31 @@ void URssApiFetchOwnDesignsAction::OnListFetched(bool bSuccess, const TArray<FRs
 
 void URssApiFetchOwnDesignsAction::OnError(int32 ErrorCode, const FString& ErrorMessage)
 {
+	if (bCompleted)
+	{
+		return;
+	}
+	bCompleted = true;
 	OnFailed.Broadcast(ErrorCode, ErrorMessage);
 	SetReadyToDestroy();
+}
+
+void URssApiFetchOwnDesignsAction::SetReadyToDestroy()
+{
+	bCompleted = true;
+	if (IsValid(ApiClient))
+	{
+		ApiClient->OnSignDesignListFetched.RemoveDynamic(this, &URssApiFetchOwnDesignsAction::OnListFetched);
+		ApiClient->OnApiError.RemoveDynamic(this, &URssApiFetchOwnDesignsAction::OnError);
+	}
+	Super::SetReadyToDestroy();
 }
 
 URssApiFetchDesignByIdAction* URssApiFetchDesignByIdAction::FetchDesignById(UObject* WorldContextObject,
 																			const FString& DesignId)
 {
 	URssApiFetchDesignByIdAction* Action = NewObject<URssApiFetchDesignByIdAction>();
+	Action->RegisterWithGameInstance(WorldContextObject);
 	Action->ApiClient = URssApiClient::Get(WorldContextObject);
 	Action->DesignId = DesignId;
 	return Action;
@@ -361,9 +391,16 @@ URssApiFetchDesignByIdAction* URssApiFetchDesignByIdAction::FetchDesignById(UObj
 
 void URssApiFetchDesignByIdAction::Activate()
 {
-	if (!ApiClient)
+	if (bActivated || bCompleted)
 	{
+		return;
+	}
+	bActivated = true;
+	if (!IsValid(ApiClient))
+	{
+		bCompleted = true;
 		OnFailed.Broadcast(400, TEXT("API client not available"));
+		SetReadyToDestroy();
 		return;
 	}
 
@@ -375,6 +412,11 @@ void URssApiFetchDesignByIdAction::Activate()
 
 void URssApiFetchDesignByIdAction::OnDesignFetched(bool bSuccess, const FRssSignData& SignData)
 {
+	if (bCompleted)
+	{
+		return;
+	}
+	bCompleted = true;
 	if (bSuccess)
 	{
 		OnSuccess.Broadcast(true, SignData);
@@ -388,14 +430,31 @@ void URssApiFetchDesignByIdAction::OnDesignFetched(bool bSuccess, const FRssSign
 
 void URssApiFetchDesignByIdAction::OnError(int32 ErrorCode, const FString& ErrorMessage)
 {
+	if (bCompleted)
+	{
+		return;
+	}
+	bCompleted = true;
 	OnFailed.Broadcast(ErrorCode, ErrorMessage);
 	SetReadyToDestroy();
+}
+
+void URssApiFetchDesignByIdAction::SetReadyToDestroy()
+{
+	bCompleted = true;
+	if (IsValid(ApiClient))
+	{
+		ApiClient->OnSignDesignFetched.RemoveDynamic(this, &URssApiFetchDesignByIdAction::OnDesignFetched);
+		ApiClient->OnApiError.RemoveDynamic(this, &URssApiFetchDesignByIdAction::OnError);
+	}
+	Super::SetReadyToDestroy();
 }
 
 URssApiFetchPublicDesignsAction* URssApiFetchPublicDesignsAction::FetchPublicDesigns(UObject* WorldContextObject,
 																					 int32 Limit, int32 Offset)
 {
 	URssApiFetchPublicDesignsAction* Action = NewObject<URssApiFetchPublicDesignsAction>();
+	Action->RegisterWithGameInstance(WorldContextObject);
 	Action->ApiClient = URssApiClient::Get(WorldContextObject);
 	Action->LimitParam = Limit;
 	Action->OffsetParam = Offset;
@@ -404,9 +463,16 @@ URssApiFetchPublicDesignsAction* URssApiFetchPublicDesignsAction::FetchPublicDes
 
 void URssApiFetchPublicDesignsAction::Activate()
 {
-	if (!ApiClient)
+	if (bActivated || bCompleted)
 	{
+		return;
+	}
+	bActivated = true;
+	if (!IsValid(ApiClient))
+	{
+		bCompleted = true;
 		OnFailed.Broadcast(400, TEXT("API client not available"));
+		SetReadyToDestroy();
 		return;
 	}
 
@@ -418,6 +484,11 @@ void URssApiFetchPublicDesignsAction::Activate()
 
 void URssApiFetchPublicDesignsAction::OnListFetched(bool bSuccess, const TArray<FRssSignData>& Designs)
 {
+	if (bCompleted)
+	{
+		return;
+	}
+	bCompleted = true;
 	if (bSuccess)
 	{
 		OnSuccess.Broadcast(true, Designs);
@@ -431,22 +502,46 @@ void URssApiFetchPublicDesignsAction::OnListFetched(bool bSuccess, const TArray<
 
 void URssApiFetchPublicDesignsAction::OnError(int32 ErrorCode, const FString& ErrorMessage)
 {
+	if (bCompleted)
+	{
+		return;
+	}
+	bCompleted = true;
 	OnFailed.Broadcast(ErrorCode, ErrorMessage);
 	SetReadyToDestroy();
+}
+
+void URssApiFetchPublicDesignsAction::SetReadyToDestroy()
+{
+	bCompleted = true;
+	if (IsValid(ApiClient))
+	{
+		ApiClient->OnSignDesignListFetched.RemoveDynamic(this, &URssApiFetchPublicDesignsAction::OnListFetched);
+		ApiClient->OnApiError.RemoveDynamic(this, &URssApiFetchPublicDesignsAction::OnError);
+	}
+	Super::SetReadyToDestroy();
 }
 
 URssApiFetchDesignLimitsAction* URssApiFetchDesignLimitsAction::FetchDesignLimits(UObject* WorldContextObject)
 {
 	URssApiFetchDesignLimitsAction* Action = NewObject<URssApiFetchDesignLimitsAction>();
+	Action->RegisterWithGameInstance(WorldContextObject);
 	Action->ApiClient = URssApiClient::Get(WorldContextObject);
 	return Action;
 }
 
 void URssApiFetchDesignLimitsAction::Activate()
 {
-	if (!ApiClient)
+	if (bActivated || bCompleted)
 	{
+		return;
+	}
+	bActivated = true;
+	if (!IsValid(ApiClient))
+	{
+		bCompleted = true;
 		OnFailed.Broadcast(400, TEXT("API client not available"));
+		SetReadyToDestroy();
 		return;
 	}
 
@@ -456,6 +551,11 @@ void URssApiFetchDesignLimitsAction::Activate()
 
 void URssApiFetchDesignLimitsAction::OnError(int32 ErrorCode, const FString& ErrorMessage)
 {
+	if (bCompleted)
+	{
+		return;
+	}
+	bCompleted = true;
 	if (ErrorCode == 200)
 	{
 		OnSuccess.Broadcast(200, TEXT("Limits fetched successfully"));
@@ -465,4 +565,14 @@ void URssApiFetchDesignLimitsAction::OnError(int32 ErrorCode, const FString& Err
 		OnFailed.Broadcast(ErrorCode, ErrorMessage);
 	}
 	SetReadyToDestroy();
+}
+
+void URssApiFetchDesignLimitsAction::SetReadyToDestroy()
+{
+	bCompleted = true;
+	if (IsValid(ApiClient))
+	{
+		ApiClient->OnApiError.RemoveDynamic(this, &URssApiFetchDesignLimitsAction::OnError);
+	}
+	Super::SetReadyToDestroy();
 }
