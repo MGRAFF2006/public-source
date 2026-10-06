@@ -100,7 +100,7 @@ void UKAPIDataAssetSubsystem::EmptyAssets()
 }
 
 void UKAPIDataAssetSubsystem::CollectDataAssetsOfClass(const UClass* AssetClass,
-													   TArray<UKAPIDataAssetBase*>& OutSortedAssets)
+													   TArray<UKAPIDataAssetBase*>& OutSortedAssets, bool bFilterEnabled)
 {
 	OutSortedAssets.Empty();
 
@@ -131,6 +131,12 @@ void UKAPIDataAssetSubsystem::CollectDataAssetsOfClass(const UClass* AssetClass,
 
 		if (UKAPIDataAssetBase* BaseAsset = Cast<UKAPIDataAssetBase>(Obj))
 		{
+			if (!bFilterEnabled)
+			{
+				RawObjects.Add(FSortiableAsset(BaseAsset));
+				continue;
+			}
+
 			if (UKAPIDataAssetBase::IsEnabled(BaseAsset, GetWorld()))
 			{
 				UE_LOG(LogKApi, Log, TEXT("Found %s"), *BaseAsset->GetPathName());

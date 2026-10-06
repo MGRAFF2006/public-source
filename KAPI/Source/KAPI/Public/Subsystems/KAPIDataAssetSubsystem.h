@@ -57,7 +57,7 @@ public:
 	bool FindAllDataAssetsOfClass(TSet<TObjectPtr<T>>& OutDataAssets);
 
 	template <class T>
-	bool FindAllDataAssetsOfClass(TArray<T*>& OutDataAssets);
+	bool FindAllDataAssetsOfClass(TArray<T*>& OutDataAssets, bool bFilterEnabled = true);
 
 	template <class T>
 	bool FindAllDataAssetsOfClassUnfiltered(TArray<T*>& OutDataAssets);
@@ -164,7 +164,8 @@ public:
 
 protected:
 
-	void CollectDataAssetsOfClass(const UClass* AssetClass, TArray<UKAPIDataAssetBase*>& OutSortedAssets);
+	void CollectDataAssetsOfClass(const UClass* AssetClass, TArray<UKAPIDataAssetBase*>& OutSortedAssets,
+								 bool bFilterEnabled = true);
 };
 
 struct FSortiableAsset
@@ -219,12 +220,12 @@ bool UKAPIDataAssetSubsystem::FindAllDataAssetsOfClass(TSet<T*>& OutDataAssets)
 }
 
 template <class T>
-bool UKAPIDataAssetSubsystem::FindAllDataAssetsOfClass(TArray<T*>& OutDataAssets)
+bool UKAPIDataAssetSubsystem::FindAllDataAssetsOfClass(TArray<T*>& OutDataAssets, bool bFilterEnabled)
 {
 	OutDataAssets.Empty();
 
 	TArray<UKAPIDataAssetBase*> SortedAssets;
-	CollectDataAssetsOfClass(T::StaticClass(), SortedAssets);
+	CollectDataAssetsOfClass(T::StaticClass(), SortedAssets, bFilterEnabled);
 
 	OutDataAssets.Reserve(SortedAssets.Num());
 	for (UKAPIDataAssetBase* Asset : SortedAssets)
@@ -242,7 +243,7 @@ bool UKAPIDataAssetSubsystem::FindAllDataAssetsOfClass(TArray<T*>& OutDataAssets
 template <class T>
 bool UKAPIDataAssetSubsystem::FindAllDataAssetsOfClassUnfiltered(TArray<T*>& OutDataAssets)
 {
-	return FindAllDataAssetsOfClass(OutDataAssets);
+	return FindAllDataAssetsOfClass(OutDataAssets, false);
 }
 
 template <class T>
