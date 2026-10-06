@@ -97,8 +97,8 @@ The Sign Gun is a handheld tool that lets you copy a sign's full design and past
 
 | Control | What it does |
 |---|---|
-| Left click | Copy the design from the sign you're pointing at |
-| Right click (hold) | Paste the copied design onto every sign you aim at |
+| Right click | Copy the design from the sign you're pointing at |
+| Left click (hold) | Paste the copied design onto every sign you aim at |
 | Middle mouse | Open the full editor for the targeted sign |
 
 - Works across a long range so you don't have to walk up to every sign
