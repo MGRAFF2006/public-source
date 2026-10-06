@@ -75,8 +75,8 @@ void UKPCLColoredStaticMesh::ApplyNewData()
 bool UKPCLColoredStaticMesh::CheckIndex(FKPCLColorData ColorData, bool IsFG)
 {
 	int32 FirstIndex = IsFG ? 0 : 20;
-	if ((FirstIndex + ColorData.mColorIndex) < mNumCustomDataFloats &&
-		mCustomExtraData.IsValidIndex(ColorData.mColorIndex))
+	if (ColorData.mColorIndex >= 0 && (FirstIndex + ColorData.mColorIndex) < mNumCustomDataFloats &&
+		(IsFG ? ColorData.mColorIndex < 20 : mCustomExtraData.IsValidIndex(ColorData.mColorIndex)))
 	{
 		if (IsFG)
 		{
@@ -90,7 +90,7 @@ bool UKPCLColoredStaticMesh::CheckIndex(FKPCLColorData ColorData, bool IsFG)
 	}
 	if (FirstIndex + ColorData.mColorIndex < mNumCustomDataFloats)
 		UE_LOG(LogTemp, Error, TEXT("Try set an invalid index %d for owner %s"), FirstIndex + ColorData.mColorIndex,
-			   *GetOwner()->GetClass()->GetName())
+			   *GetNameSafe(GetOwner()))
 	return false;
 }
 
