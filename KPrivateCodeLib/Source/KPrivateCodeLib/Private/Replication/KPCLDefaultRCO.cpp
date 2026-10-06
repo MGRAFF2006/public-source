@@ -87,6 +87,10 @@ void UKPCLDefaultRCO::Server_LootChest_Implementation(AKPCLLootChest* Target, AF
 int32 UKPCLDefaultRCO::MoveItemAmount(UFGInventoryComponent* Source, int32 SourceIndex, UFGInventoryComponent* Target,
 									  FItemAmount Amount, bool ResizeToFit)
 {
+	if (Source == Target || SourceIndex < 0)
+	{
+		return 0;
+	}
 	if (ensure(Source && Target && Amount.ItemClass && Amount.Amount > 0))
 	{
 		FInventoryStack Stack;

@@ -703,12 +703,11 @@ bool AKPCLNetworkCore::IsStorageEmpty(TSubclassOf<UFGItemDescriptor> Item) const
 int32 AKPCLNetworkCore::TryToStoreItem(UFGInventoryComponent* Inventory, TSubclassOf<UFGItemDescriptor> Item,
 									   int32 Amount, int32 InventorySlot)
 {
-	if (!IsValid(Inventory) || Amount <= 0 || IsItemBlacklisted(Item))
+	if (!IsValid(Inventory) || Amount <= 0 || InventorySlot < 0 || IsItemBlacklisted(Item))
 	{
 		return 0;
 	}
 
-	InventorySlot = FMath::Max(InventorySlot, 0);
 	FInventoryStack Stack;
 	if (!Inventory->GetStackFromIndex(InventorySlot, Stack) || !Stack.HasItems() || Stack.Item.GetItemClass() != Item)
 	{
