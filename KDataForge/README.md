@@ -107,7 +107,7 @@ Full grammar, examples for every document type, and task-oriented tutorials live
 - Reflection-based property engine: supports every reflectable UObject property type, including Blueprint structs and PrimaryDataAssets
 - Fixed stage pipeline (tags → assets → localization → CDO changes → content → validation)
 - Vanilla value snapshots power editor diffs, undo support, and changes-only export
-- Extensible C++/Blueprint handler API for other mods (`IKDFDataEditorHandler`)
+- Extensible C++ handler API for other mods (`IKDFDataEditorHandler`)
 - Dedicated server compatible
 
 ---
