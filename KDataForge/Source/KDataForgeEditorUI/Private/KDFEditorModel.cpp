@@ -7,6 +7,7 @@
 #include "Engine/Blueprint.h"
 #include "Engine/DataAsset.h"
 #include "Engine/World.h"
+#include "HAL/FileManager.h"
 #include "Internationalization/Text.h"
 #include "KDFNode.h"
 #include "KDFYamlParser.h"
@@ -1269,6 +1270,15 @@ bool UKDFEditorModel::CreateContentDraft(const FString& Kind, const FString& Id,
 		return false;
 	}
 
+	for (const TCHAR Character : Id)
+	{
+		if (!FChar::IsAlnum(Character) && Character != TEXT('_') && Character != TEXT('-'))
+		{
+			OutMessage = TEXT("Id may contain only letters, numbers, underscores, and hyphens");
+			return false;
+		}
+	}
+
 	const bool bIsDataAsset = Kind == TEXT("dataasset");
 	const bool bIsGenericClass = Kind == TEXT("class");
 	if ((bIsDataAsset || bIsGenericClass || Kind == TEXT("unlock")) && ParentOrClassPath.IsEmpty())
@@ -1312,6 +1322,11 @@ bool UKDFEditorModel::CreateContentDraft(const FString& Kind, const FString& Id,
 	const FString Directory =
 		FPaths::ConvertRelativePathToFull(FPaths::ProjectDir()) / TEXT("DataForge") / TEXT("created");
 	const FString FilePath = Directory / FString::Printf(TEXT("%s.%s.yml"), *Id, *Kind);
+	if (IFileManager::Get().FileExists(*FilePath))
+	{
+		OutMessage = FString::Printf(TEXT("Draft already exists: %s"), *FilePath);
+		return false;
+	}
 	if (!FFileHelper::SaveStringToFile(FKDFYamlParser::EmitString(Document.Get()), *FilePath))
 	{
 		OutMessage = FString::Printf(TEXT("Could not write %s"), *FilePath);
